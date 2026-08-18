@@ -66,6 +66,16 @@
   .usp-text b{ font-family:'Space Grotesk',sans-serif; font-size:12.5px; letter-spacing:0.4px; }
   .usp-text p{ margin:2px 0 0; font-size:11.5px; color:var(--muted); line-height:1.4; max-width:320px; }
   @media (min-width:760px){ .usp-strip{ flex-direction:row; align-items:center; gap:28px; padding:14px clamp(16px,4vw,40px); } }
+  .usp-guide-cta{
+    display:flex; align-items:center; gap:12px; text-decoration:none; cursor:pointer;
+    padding:10px 14px; margin-left:auto; border-radius:14px;
+    background:rgba(63,232,224,0.09); border:1px solid rgba(63,232,224,0.4);
+    transition:all .2s; flex:0 0 auto;
+  }
+  .usp-guide-cta:hover{ background:rgba(63,232,224,0.18); box-shadow:0 0 18px rgba(63,232,224,0.25); border-color:var(--cyan); }
+  .usp-guide-icon{ flex:0 0 auto; width:26px; height:26px; border-radius:50%; background:var(--cyan); color:#04141A; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:14px; display:flex; align-items:center; justify-content:center; }
+  .usp-guide-cta .usp-text b{ color:var(--cyan); }
+  @media (max-width:759px){ .usp-guide-cta{ margin-left:0; } }
 
   .global-banner{ background:rgba(255,92,122,0.10); border-bottom:1px solid rgba(255,92,122,0.3); color:var(--red); font-size:12px; line-height:1.6; padding:10px 16px; }
   .global-banner[hidden]{ display:none; }
@@ -75,7 +85,7 @@
   .block-title{ font-family:'Space Grotesk',sans-serif; font-size:11.5px; letter-spacing:1.3px; text-transform:uppercase; color:var(--muted); margin:0 0 12px; display:flex; align-items:center; gap:10px; }
   .block-title-row{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
   .block-title-row .block-title{ margin-bottom:0; flex:1; }
-  .info-btn{ flex:0 0 auto; height:26px; padding:0 12px; border-radius:13px; background:rgba(63,232,224,0.12); border:1px solid rgba(63,232,224,0.45); color:var(--cyan); font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; }
+  .info-btn{ flex:0 0 auto; height:26px; padding:0 12px; border-radius:13px; background:rgba(63,232,224,0.12); border:1px solid rgba(63,232,224,0.45); color:var(--cyan); font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; text-decoration:none; }
   .info-btn .info-icon{ width:15px; height:15px; border-radius:50%; background:var(--cyan); color:#04141A; font-size:10px; font-weight:700; font-style:italic; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
   .info-btn:hover, .info-btn[aria-expanded="true"]{ background:rgba(63,232,224,0.22); box-shadow:0 0 14px rgba(63,232,224,0.35); }
   .depth-info{ margin-bottom:14px; padding:14px 16px; border-radius:12px; background:var(--glass-hi); border:1px solid var(--line); font-size:12px; color:var(--muted); line-height:1.6; }
@@ -254,6 +264,7 @@
 
 <header>
   <div class="header-top">
+    <a href="guide.html" target="_blank" rel="noopener" class="info-btn" id="guideLink"><span class="info-icon">?</span><span id="guideLinkLabel"></span></a>
     <button id="menuBtn" class="icon-btn" aria-label="Open indicator guide">&#9776;</button>
     <div class="lang-switch">
       <button class="lang-opt active" data-lang="en">EN</button>
@@ -278,6 +289,10 @@
     <div class="usp-heartbeat"><svg viewBox="0 0 100 24" preserveAspectRatio="none"><path d="M0,12 L20,12 L26,2 L32,22 L38,12 L100,12 L120,12 L126,2 L132,22 L138,12 L200,12" stroke="var(--cyan)" stroke-width="2.5" fill="none"/></svg></div>
     <div class="usp-text"><b id="uspPulseTitle"></b><p id="uspPulseText"></p></div>
   </div>
+  <a href="guide.html" target="_blank" rel="noopener" class="usp-guide-cta" id="uspGuideCta">
+    <span class="usp-guide-icon">?</span>
+    <span class="usp-text"><b id="uspGuideTitle"></b><p id="uspGuideText"></p></span>
+  </a>
 </section>
 
 <div class="global-banner" id="globalBanner" hidden></div>
@@ -333,7 +348,7 @@
 
 </main>
 
-<footer id="footerText"></footer>
+<footer><span id="footerText"></span> · <a href="guide.html" id="footerGuideLink" style="color:var(--cyan);"></a></footer>
 
 <div class="toast" id="toast"></div>
 
@@ -372,10 +387,12 @@ const I18N = {
     tagline: "Multi-factor entry zones for BTC, ETH, SOL and Hyperliquid, with live derivatives sentiment straight from Hyperliquid's own perp order book.",
     uspTideTitle:'Tide', uspTideText:'Shows whether a price is cheap or expensive right now — like low and high tide at the beach.',
     uspPulseTitle:'Pulse', uspPulseText:"Shows whether leveraged traders are feeling bold or scared right now — like a heartbeat monitor for the market.",
+    uspGuideTitle:'New here?', uspGuideText:'Read the plain-language guide →',
     statusConnecting:'connecting…', statusLive:'live', statusError:'connection error — retrying',
     lastUpdatePrefix:'updated', loading:'Loading…',
     blockStyle:'Trading style', blockDepth:'Order book depth', blockCorr:'Correlation', blockMatrix:'Compare all assets', blockSignals:'Live signals', blockWeights:'Weighting',
     depthInfoBtn:'What is this?',
+    guideLink:'Guide',
     depthInfo:'Every dot on the price axis is a resting limit order on Hyperliquid, added up from the mid-price outward. The <b>green area (bids)</b> shows how much size is waiting to buy below the current price; the <b>red area (asks)</b> shows how much is waiting to sell above it. A tall, steep wall close to the middle means it would take a large market order to move price past that level — a thin, gently sloping side means price could move through it easily. Lopsided depth (one side much taller) can hint at which direction has more resting support right now, but it changes second by second as orders are placed and pulled.',
     weightsHint:'Default weighting across eleven indicators, tuned per style. Drag to match your own approach.',
     weightsTotal:'Total', weightsNormalized:'(normalized)',
@@ -429,10 +446,12 @@ const I18N = {
     tagline: "Multi-Faktor-Einstiegszonen für BTC, ETH, SOL und Hyperliquid, mit Live-Derivate-Sentiment direkt aus Hyperliquids eigenem Perp-Orderbuch.",
     uspTideTitle:'Tide', uspTideText:'Zeigt, ob ein Kurs gerade günstig oder teuer ist — wie Ebbe und Flut am Strand.',
     uspPulseTitle:'Pulse', uspPulseText:'Zeigt, ob gehebelte Trader gerade mutig oder ängstlich sind — wie ein Herzschlag-Monitor für den Markt.',
+    uspGuideTitle:'Neu hier?', uspGuideText:'Anleitung in einfacher Sprache lesen →',
     statusConnecting:'verbinde…', statusLive:'live', statusError:'Verbindungsfehler — neuer Versuch',
     lastUpdatePrefix:'aktualisiert', loading:'Lädt…',
     blockStyle:'Trading-Stil', blockDepth:'Orderbuch-Tiefe', blockCorr:'Korrelation', blockMatrix:'Alle Assets vergleichen', blockSignals:'Live-Signale', blockWeights:'Gewichtung',
     depthInfoBtn:'Was bedeutet das?',
+    guideLink:'Anleitung',
     depthInfo:'Jeder Punkt auf der Preisachse ist eine offene Limit-Order auf Hyperliquid, kumuliert vom Mittelpreis nach außen. Die <b>grüne Fläche (Bids)</b> zeigt, wie viel Volumen unterhalb des aktuellen Preises zum Kauf bereitsteht; die <b>rote Fläche (Asks)</b> zeigt, wie viel oberhalb zum Verkauf bereitsteht. Eine hohe, steile Wand nahe der Mitte bedeutet, dass eine große Market-Order nötig wäre, um den Preis über dieses Level zu bewegen — eine dünne, flach ansteigende Seite bedeutet, der Preis könnte leicht hindurchlaufen. Eine schiefe Verteilung (eine Seite deutlich höher) kann andeuten, wo gerade mehr Unterstützung liegt, ändert sich aber sekündlich, da Orders laufend platziert und zurückgezogen werden.',
     weightsHint:'Standardgewichtung über elf Indikatoren, je Stil abgestimmt. Regler verschieben, um es an deine Strategie anzupassen.',
     weightsTotal:'Summe', weightsNormalized:'(normalisiert)',
@@ -1365,15 +1384,23 @@ function applyStaticText(){
   document.getElementById('uspTideText').textContent = L.uspTideText;
   document.getElementById('uspPulseTitle').textContent = L.uspPulseTitle;
   document.getElementById('uspPulseText').textContent = L.uspPulseText;
+  document.getElementById('uspGuideTitle').textContent = L.uspGuideTitle;
+  document.getElementById('uspGuideText').textContent = L.uspGuideText;
+  document.getElementById('uspGuideCta').setAttribute('href', 'guide.html?lang='+currentLang);
   document.getElementById('blockStyleTitle').textContent = L.blockStyle;
   document.getElementById('blockDepthTitle').textContent = L.blockDepth;
   document.getElementById('depthInfoBtnLabel').textContent = L.depthInfoBtn;
+  document.getElementById('guideLinkLabel').textContent = L.guideLink;
+  document.getElementById('guideLink').setAttribute('href', 'guide.html?lang='+currentLang);
   document.getElementById('blockCorrTitle').textContent = L.blockCorr;
   document.getElementById('blockMatrixTitle').textContent = L.blockMatrix;
   document.getElementById('blockSignalsTitle').textContent = L.blockSignals;
   document.getElementById('blockWeightsTitle').textContent = L.blockWeights;
   document.getElementById('weightsHint').textContent = L.weightsHint;
   document.getElementById('footerText').textContent = L.footer;
+  const footerGuide = document.getElementById('footerGuideLink');
+  footerGuide.textContent = L.guideLink;
+  footerGuide.setAttribute('href', 'guide.html?lang='+currentLang);
   document.getElementById('menuTitle').textContent = L.menuTitle;
   document.getElementById('menuIntro').textContent = L.menuIntro;
   document.getElementById('menuCloseBtn').setAttribute('aria-label', L.menuClose);
