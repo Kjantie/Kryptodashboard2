@@ -73,6 +73,15 @@
   main{ padding:20px 16px 60px; max-width:1440px; margin:0 auto; }
   section.block{ margin-bottom:26px; }
   .block-title{ font-family:'Space Grotesk',sans-serif; font-size:11.5px; letter-spacing:1.3px; text-transform:uppercase; color:var(--muted); margin:0 0 12px; display:flex; align-items:center; gap:10px; }
+  .block-title-row{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .block-title-row .block-title{ margin-bottom:0; flex:1; }
+  .info-btn{ flex:0 0 auto; height:26px; padding:0 12px; border-radius:13px; background:rgba(63,232,224,0.12); border:1px solid rgba(63,232,224,0.45); color:var(--cyan); font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; }
+  .info-btn .info-icon{ width:15px; height:15px; border-radius:50%; background:var(--cyan); color:#04141A; font-size:10px; font-weight:700; font-style:italic; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+  .info-btn:hover, .info-btn[aria-expanded="true"]{ background:rgba(63,232,224,0.22); box-shadow:0 0 14px rgba(63,232,224,0.35); }
+  .depth-info{ margin-bottom:14px; padding:14px 16px; border-radius:12px; background:var(--glass-hi); border:1px solid var(--line); font-size:12px; color:var(--muted); line-height:1.6; }
+  .depth-info[hidden]{ display:none; }
+  .depth-info .depth-info-illustration{ width:100%; max-width:320px; aspect-ratio:3/1; height:auto; display:block; margin:0 0 10px; background:rgba(255,255,255,0.03); border-radius:8px; }
+  .depth-info b{ color:var(--text); }
   .block-title::after{ content:""; flex:1; height:1px; background:var(--line-soft); }
   .block-title .kbd{ font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--muted-2); border:1px solid var(--line); border-radius:4px; padding:1px 5px; }
 
@@ -136,6 +145,21 @@
   .fbar{ height:4px; border-radius:2px; background:rgba(255,255,255,0.06); overflow:hidden; }
   .fbar i{ display:block; height:100%; border-radius:2px; background:linear-gradient(90deg,var(--cyan),var(--emerald)); }
   .risk-line{ font-size:10.5px; color:var(--muted); margin-bottom:10px; }
+
+  .setup-levels{ margin-bottom:10px; padding:12px; border-radius:12px; background:var(--glass-hi); border:1px solid var(--line); }
+  .setup-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:9px; }
+  .setup-title{ font-family:'Space Grotesk',sans-serif; font-size:10.5px; letter-spacing:0.6px; text-transform:uppercase; color:var(--muted); }
+  .setup-dir{ font-size:10.5px; font-weight:600; padding:2px 9px; border-radius:20px; }
+  .setup-dir.setup-long{ background:rgba(47,232,151,0.16); color:var(--emerald); }
+  .setup-dir.setup-short{ background:rgba(255,92,122,0.16); color:var(--red); }
+  .setup-rows{ display:grid; grid-template-columns:1fr 1fr; gap:6px 14px; margin-bottom:8px; }
+  .setup-row{ display:flex; justify-content:space-between; font-size:11px; color:var(--muted); gap:8px; }
+  .setup-row b{ color:var(--text); font-weight:600; }
+  .setup-row.setup-invalid b{ color:var(--red); }
+  .setup-row.setup-target b{ color:var(--emerald); }
+  .setup-rr{ font-size:10.5px; color:var(--cyan); font-family:'IBM Plex Mono',monospace; margin-bottom:6px; }
+  .setup-disclaimer{ font-size:9.5px; color:var(--muted-2); line-height:1.4; }
+  .setup-neutral{ font-size:11.5px; color:var(--muted); font-style:italic; }
   .risk-line b{ color:var(--text); }
   .data-note{ margin-bottom:8px; padding:7px 9px; border-radius:7px; background:rgba(255,92,122,0.08); border:1px solid rgba(255,92,122,0.3); font-size:10.5px; color:var(--red); }
   .data-note[hidden]{ display:none; }
@@ -271,7 +295,11 @@
   </section>
 
   <section class="block">
-    <p class="block-title" id="blockDepthTitle"></p>
+    <div class="block-title-row">
+      <p class="block-title" id="blockDepthTitle"></p>
+      <button class="info-btn" id="depthInfoBtn" aria-expanded="false"><span class="info-icon">i</span><span id="depthInfoBtnLabel"></span></button>
+    </div>
+    <div class="depth-info" id="depthInfo" hidden></div>
     <div class="depth-tabs" id="depthTabs"></div>
     <div class="glass depth-canvas-wrap">
       <canvas class="depth-canvas" id="depthCanvas"></canvas>
@@ -347,6 +375,8 @@ const I18N = {
     statusConnecting:'connecting…', statusLive:'live', statusError:'connection error — retrying',
     lastUpdatePrefix:'updated', loading:'Loading…',
     blockStyle:'Trading style', blockDepth:'Order book depth', blockCorr:'Correlation', blockMatrix:'Compare all assets', blockSignals:'Live signals', blockWeights:'Weighting',
+    depthInfoBtn:'What is this?',
+    depthInfo:'Every dot on the price axis is a resting limit order on Hyperliquid, added up from the mid-price outward. The <b>green area (bids)</b> shows how much size is waiting to buy below the current price; the <b>red area (asks)</b> shows how much is waiting to sell above it. A tall, steep wall close to the middle means it would take a large market order to move price past that level — a thin, gently sloping side means price could move through it easily. Lopsided depth (one side much taller) can hint at which direction has more resting support right now, but it changes second by second as orders are placed and pulled.',
     weightsHint:'Default weighting across eleven indicators, tuned per style. Drag to match your own approach.',
     weightsTotal:'Total', weightsNormalized:'(normalized)',
     footer:'Data: CoinGecko, Kraken, Hyperliquid, Alternative.me. Not financial advice.',
@@ -363,6 +393,11 @@ const I18N = {
           trendBull:'trend bullish', trendBear:'trend bearish', fib:(v)=>`${v}% Fibonacci retracement`, sentimentPrefix:'sentiment' },
     factorVals:{ bullish:'bullish', bearish:'bearish', rising:'rising', falling:'falling' },
     riskLine:(atrPct,stop)=>`Volatility (ATR): ${atrPct}% · reference stop distance: ~${stop}`,
+    setup:{
+      heading:'Setup levels', longRef:'Long-side reference', shortRef:'Short-side reference', noSetup:'No directional setup — zone is neutral.',
+      entry:'Entry zone', invalidation:'Invalidation', target1:'Target 1', target2:'Target 2', rr:'Reference R:R',
+      disclaimer:'Mechanically derived from Fibonacci structure around the current price. Not a trade recommendation — position sizing and risk are your decision.',
+    },
     dataUnavailable:'Live update failed — showing last known data.',
     globalBanner:"No live data could be loaded. If you're seeing this inside a preview pane, open the downloaded file directly in your browser instead.",
     expandMore:'Show full breakdown', expandLess:'Hide breakdown',
@@ -397,6 +432,8 @@ const I18N = {
     statusConnecting:'verbinde…', statusLive:'live', statusError:'Verbindungsfehler — neuer Versuch',
     lastUpdatePrefix:'aktualisiert', loading:'Lädt…',
     blockStyle:'Trading-Stil', blockDepth:'Orderbuch-Tiefe', blockCorr:'Korrelation', blockMatrix:'Alle Assets vergleichen', blockSignals:'Live-Signale', blockWeights:'Gewichtung',
+    depthInfoBtn:'Was bedeutet das?',
+    depthInfo:'Jeder Punkt auf der Preisachse ist eine offene Limit-Order auf Hyperliquid, kumuliert vom Mittelpreis nach außen. Die <b>grüne Fläche (Bids)</b> zeigt, wie viel Volumen unterhalb des aktuellen Preises zum Kauf bereitsteht; die <b>rote Fläche (Asks)</b> zeigt, wie viel oberhalb zum Verkauf bereitsteht. Eine hohe, steile Wand nahe der Mitte bedeutet, dass eine große Market-Order nötig wäre, um den Preis über dieses Level zu bewegen — eine dünne, flach ansteigende Seite bedeutet, der Preis könnte leicht hindurchlaufen. Eine schiefe Verteilung (eine Seite deutlich höher) kann andeuten, wo gerade mehr Unterstützung liegt, ändert sich aber sekündlich, da Orders laufend platziert und zurückgezogen werden.',
     weightsHint:'Standardgewichtung über elf Indikatoren, je Stil abgestimmt. Regler verschieben, um es an deine Strategie anzupassen.',
     weightsTotal:'Summe', weightsNormalized:'(normalisiert)',
     footer:'Daten: CoinGecko, Kraken, Hyperliquid, Alternative.me. Keine Anlageberatung.',
@@ -413,6 +450,11 @@ const I18N = {
           trendBull:'Trend bullisch', trendBear:'Trend bärisch', fib:(v)=>`${v}% Fibonacci-Retracement`, sentimentPrefix:'Sentiment' },
     factorVals:{ bullish:'bullisch', bearish:'bärisch', rising:'steigend', falling:'fallend' },
     riskLine:(atrPct,stop)=>`Volatilität (ATR): ${atrPct}% · Referenz-Stop-Abstand: ~${stop}`,
+    setup:{
+      heading:'Setup-Level', longRef:'Long-Referenz', shortRef:'Short-Referenz', noSetup:'Keine richtungsklare Struktur — Zone ist neutral.',
+      entry:'Einstiegszone', invalidation:'Invalidierung', target1:'Ziel 1', target2:'Ziel 2', rr:'Referenz-CRV',
+      disclaimer:'Mechanisch aus der Fibonacci-Struktur um den aktuellen Preis abgeleitet. Keine Handelsempfehlung — Positionsgröße und Risiko sind deine Entscheidung.',
+    },
     dataUnavailable:'Live-Update fehlgeschlagen — zeigt letzte bekannte Daten.',
     globalBanner:'Es konnten keine Live-Daten geladen werden. Falls du das in einer Vorschau siehst, öffne die Datei direkt im Browser.',
     expandMore:'Vollständige Aufschlüsselung zeigen', expandLess:'Aufschlüsselung ausblenden',
@@ -545,6 +587,38 @@ function computeFib(highs, lows, price){
   const hi=Math.max(...highs), lo=Math.min(...lows);
   if(hi===lo) return 50;
   return (hi-price)/(hi-lo)*100;
+}
+function computeFibLevels(highs, lows){
+  const hi=Math.max(...highs), lo=Math.min(...lows);
+  const pcts = [0, 23.6, 38.2, 50, 61.8, 78.6, 100];
+  const levels = pcts.map(pct => ({ pct, price: hi - (pct/100)*(hi-lo) }));
+  return { hi, lo, levels };
+}
+// Purely mechanical: maps the already-computed zone (Accumulation/Neutral/Distribution)
+// onto the nearest Fibonacci levels around the current price. Not a trade recommendation —
+// just the existing technical structure organized as concrete price references.
+function buildSetupReference(price, fibData, zoneLabel, zoneKind){
+  if(!fibData || zoneKind==='neutral') return { direction:'neutral' };
+  const levels = fibData.levels.map(l=>l.price).sort((a,b)=>a-b); // ascending: lo..hi
+  if(zoneKind==='long'){
+    const below = levels.filter(p=>p<=price);
+    const above = levels.filter(p=>p>price);
+    const entry = below.length ? below[below.length-1] : fibData.lo;
+    const invalidation = below.length>1 ? below[below.length-2] : fibData.lo;
+    const target1 = above.length ? above[0] : fibData.hi;
+    const target2 = above.length>1 ? above[1] : fibData.hi;
+    return { direction:'long', entry, invalidation, target1, target2,
+      rr: (invalidation!==entry) ? Math.abs(target1-entry)/Math.abs(entry-invalidation) : null };
+  } else {
+    const above = levels.filter(p=>p>=price);
+    const below = levels.filter(p=>p<price);
+    const entry = above.length ? above[0] : fibData.hi;
+    const invalidation = above.length>1 ? above[1] : fibData.hi;
+    const target1 = below.length ? below[below.length-1] : fibData.lo;
+    const target2 = below.length>1 ? below[below.length-2] : fibData.lo;
+    return { direction:'short', entry, invalidation, target1, target2,
+      rr: (invalidation!==entry) ? Math.abs(entry-target1)/Math.abs(invalidation-entry) : null };
+  }
 }
 
 // ---------- factor scores (0-100, higher = more attractive entry) ----------
@@ -880,7 +954,6 @@ function hbSvg(hex){
 // ---------- insight generator (rule-based, from real computed factors) ----------
 function generateInsight(sym, scores, raw, score, zone){
   const L = t();
-  const parts = [];
   const rank = FACTOR_KEYS.map(k=>({k, v:scores[k]})).filter(x=>weights[currentStyle][x.k]>0).sort((a,b)=>Math.abs(b.v-50)-Math.abs(a.v-50));
   const top = rank[0];
   if(!top) return `${sym}: ${zone.label} (${score.toFixed(0)}/100).`;
@@ -924,7 +997,8 @@ function buildCards(){
       </div>
       <div class="gauge-chart-row">
         <div class="gauge-wrap" id="gauge-${a.id}">
-          <div class="gauge-center"><div class="gauge-num mono">—</div><div class="gauge-zone"></div></div>
+          <div class="gauge-center"><div class="gauge-num mono" id="score-${a.id}">—</div><div class="gauge-zone" id="zone-${a.id}"></div></div>
+          <div class="gauge-wave"></div>
         </div>
         <div class="chart-wrap">
           <canvas class="chart-canvas" id="chart-${a.id}"></canvas>
@@ -933,6 +1007,7 @@ function buildCards(){
       </div>
       <div class="insight" id="insight-${a.id}"><span class="tag">Auto insight</span>${t().loading}</div>
       <div class="data-note" id="note-${a.id}" hidden></div>
+      <div class="setup-levels" id="setup-${a.id}"></div>
       <button class="expand-btn" id="expandBtn-${a.id}">${t().expandMore}</button>
       <div class="detail" id="detail-${a.id}"><div class="detail-inner">
         <div class="factors" id="factors-${a.id}"></div>
@@ -1004,6 +1079,41 @@ function renderRisk(id, raw){
   if(raw.atr==null || !market[id]){ el.innerHTML=''; return; }
   const price = market[id].price; const stop = price - 1.5*raw.atr;
   el.innerHTML = t().riskLine(raw.atrPct.toFixed(1), fmtUsd(stop));
+}
+
+function renderSetupLevels(assetId, score, zoneLabel){
+  const L = t();
+  const el = document.getElementById('setup-'+assetId);
+  if(!el) return;
+  const ohlc = rawOHLC[currentStyle][assetId];
+  const m = market[assetId];
+  if(!ohlc || !m){ el.innerHTML=''; return; }
+
+  const zoneKind = score>=70 ? 'long' : score<40 ? 'short' : 'neutral';
+  // Use the SAME full window as the underlying fib score factor (applyStyleData/computeFib),
+  // not a shorter slice — otherwise the levels shown here could contradict the score's own reasoning.
+  const fibData = computeFibLevels(ohlc.highs, ohlc.lows);
+  const setup = buildSetupReference(m.price, fibData, zoneLabel, zoneKind);
+
+  if(setup.direction==='neutral'){
+    el.innerHTML = `<div class="setup-head"><span class="setup-title">${L.setup.heading}</span></div><div class="setup-neutral">${L.setup.noSetup}</div>`;
+    return;
+  }
+  const dirLabel = setup.direction==='long' ? L.setup.longRef : L.setup.shortRef;
+  const dirClass = setup.direction==='long' ? 'setup-long' : 'setup-short';
+  const rrText = setup.rr!=null ? `${L.setup.rr} ${setup.rr.toFixed(2)}:1` : '';
+
+  el.innerHTML = `
+    <div class="setup-head"><span class="setup-title">${L.setup.heading}</span><span class="setup-dir ${dirClass}">${dirLabel}</span></div>
+    <div class="setup-rows">
+      <div class="setup-row"><span>${L.setup.entry}</span><b class="mono">${fmtUsd(setup.entry)}</b></div>
+      <div class="setup-row setup-invalid"><span>${L.setup.invalidation}</span><b class="mono">${fmtUsd(setup.invalidation)}</b></div>
+      <div class="setup-row setup-target"><span>${L.setup.target1}</span><b class="mono">${fmtUsd(setup.target1)}</b></div>
+      <div class="setup-row setup-target"><span>${L.setup.target2}</span><b class="mono">${fmtUsd(setup.target2)}</b></div>
+    </div>
+    <div class="setup-rr">${rrText}</div>
+    <div class="setup-disclaimer">${L.setup.disclaimer}</div>
+  `;
 }
 
 function renderDerivatives(assetId){
@@ -1088,7 +1198,7 @@ function recomputeAllScores(recordSignals){
     chgEl.textContent = (m.chg24h>=0?'+':'')+m.chg24h.toFixed(2)+'% 24h';
     chgEl.className = 'chg mono '+(m.chg24h>=0?'up':'down');
 
-    document.getElementById('gauge-'+a.id).innerHTML = gaugeSvg(score, zone) + `<div class="gauge-center"><div class="gauge-num mono" style="color:${zone.hex}">${score.toFixed(0)}</div><div class="gauge-zone">${zone.label}</div></div>`;
+    document.getElementById('gauge-'+a.id).innerHTML = gaugeSvg(score, zone) + `<div class="gauge-center"><div class="gauge-num mono" id="score-${a.id}" style="color:${zone.hex}">${score.toFixed(0)}</div><div class="gauge-zone" id="zone-${a.id}">${zone.label}</div></div><div class="gauge-wave">${waveSvg(zone.hex)}</div>`;
 
     const ohlc = rawOHLC[currentStyle][a.id];
     if(ohlc){
@@ -1100,6 +1210,7 @@ function recomputeAllScores(recordSignals){
 
     renderFactors(a.id, scores, raw, w);
     renderRisk(a.id, raw);
+    renderSetupLevels(a.id, score, zone.label);
 
     const note = document.getElementById('note-'+a.id);
     const stale = rawFetch && rawFetch._error;
@@ -1200,6 +1311,24 @@ function buildDepthTabs(){
   });
 }
 
+const DEPTH_ILLUSTRATION = `<svg viewBox="0 0 240 80" width="100%" height="100%" class="depth-info-illustration" aria-hidden="true">
+  <line x1="120" y1="8" x2="120" y2="72" stroke="rgba(255,255,255,0.2)" stroke-dasharray="3 3"/>
+  <path d="M120,68 C90,64 60,56 30,30 L14,30 L14,72 L120,72 Z" fill="rgba(47,232,151,0.22)" stroke="#2FE897" stroke-width="1.5"/>
+  <path d="M120,68 C150,64 180,56 210,30 L226,30 L226,72 L120,72 Z" fill="rgba(255,92,122,0.22)" stroke="#FF5C7A" stroke-width="1.5"/>
+</svg>`;
+
+function renderDepthInfo(){
+  document.getElementById('depthInfo').innerHTML = DEPTH_ILLUSTRATION + t().depthInfo;
+}
+const depthInfoBtn = document.getElementById('depthInfoBtn');
+const depthInfoPanel = document.getElementById('depthInfo');
+depthInfoBtn.addEventListener('click', ()=>{
+  const open = depthInfoPanel.hidden;
+  depthInfoPanel.hidden = !open;
+  depthInfoBtn.setAttribute('aria-expanded', String(open));
+  if(open) renderDepthInfo();
+});
+
 // ---------- menu illustrations ----------
 const FACTOR_ICONS = {
   rsi: `<svg viewBox="0 0 240 80" width="100%" height="100%" class="menu-illustration" aria-hidden="true"><line x1="14" y1="18" x2="222" y2="18" stroke="rgba(255,255,255,0.15)" stroke-dasharray="3 3"/><line x1="14" y1="58" x2="222" y2="58" stroke="rgba(255,255,255,0.15)" stroke-dasharray="3 3"/><path d="M14,34 C40,10 60,66 90,64 C120,62 140,20 170,24 C195,27 210,15 222,10" fill="none" stroke="#3FE8E0" stroke-width="2.5"/><circle cx="90" cy="64" r="4" fill="#2FE897"/></svg>`,
@@ -1238,6 +1367,7 @@ function applyStaticText(){
   document.getElementById('uspPulseText').textContent = L.uspPulseText;
   document.getElementById('blockStyleTitle').textContent = L.blockStyle;
   document.getElementById('blockDepthTitle').textContent = L.blockDepth;
+  document.getElementById('depthInfoBtnLabel').textContent = L.depthInfoBtn;
   document.getElementById('blockCorrTitle').textContent = L.blockCorr;
   document.getElementById('blockMatrixTitle').textContent = L.blockMatrix;
   document.getElementById('blockSignalsTitle').textContent = L.blockSignals;
@@ -1257,6 +1387,7 @@ function applyStaticText(){
   buildWeightSliders(); renderMenu(); renderSignals();
   const banner = document.getElementById('globalBanner');
   if(!banner.hidden) banner.textContent = L.globalBanner;
+  if(!document.getElementById('depthInfo').hidden) renderDepthInfo();
 }
 function renderStatus(){
   const L = t();
