@@ -45,10 +45,12 @@
   .lang-opt{ background:var(--glass); color:var(--muted); border:none; padding:0 12px; height:36px; font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; cursor:pointer; }
   .lang-opt.active{ background:var(--cyan); color:#04141A; }
   .header-main{ display:flex; flex-direction:column; gap:12px; }
-  .brand{ display:flex; align-items:baseline; gap:8px; }
-  .brand h1{ font-family:'Space Grotesk',sans-serif; font-size:24px; font-weight:700; margin:0; letter-spacing:0.5px;
-    background:linear-gradient(90deg,var(--cyan),var(--emerald)); -webkit-background-clip:text; background-clip:text; color:transparent; }
-  .brand .badge{ font-size:10px; padding:3px 8px; border-radius:20px; background:var(--glass); border:1px solid var(--line); color:var(--muted); letter-spacing:0.5px; }
+  .brand{ display:flex; align-items:baseline; gap:12px; }
+  .brand h1{ font-family:'Space Grotesk',sans-serif; font-size:38px; font-weight:700; margin:0; letter-spacing:0.5px; line-height:1;
+    background:linear-gradient(90deg,var(--cyan),var(--emerald)); -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 0 18px rgba(63,232,224,0.25)); }
+  .brand .badge{ font-size:11px; padding:4px 10px; border-radius:20px; background:var(--glass); border:1px solid var(--line); color:var(--muted); letter-spacing:0.5px; }
+  @media (min-width:640px){ .brand h1{ font-size:52px; } }
   .tagline{ color:var(--muted); font-size:12.5px; max-width:540px; line-height:1.5; }
   .status{ display:flex; align-items:center; gap:8px; font-size:11px; color:var(--muted); }
   .dot{ width:6px; height:6px; border-radius:50%; background:var(--emerald); box-shadow:0 0 8px var(--emerald); animation:pulseDot 2s ease-in-out infinite; }
@@ -196,6 +198,15 @@
   .flow-badge.flow-squeeze{ background:rgba(63,232,224,0.16); color:var(--cyan); }
   .flow-badge.flow-neutral{ background:rgba(255,255,255,0.06); color:var(--muted); }
   .pulse-unavailable{ font-size:11px; color:var(--muted); font-style:italic; }
+
+  .binance-pulse{ margin-top:6px; }
+  .binance-pulse .pulse-title{ cursor:help; border-bottom:1px dotted var(--muted); }
+  .ls-split-track{ display:flex; height:6px; border-radius:3px; overflow:hidden; background:rgba(255,255,255,0.06); }
+  .ls-split-long{ background:var(--emerald); height:100%; }
+  .ls-split-short{ background:var(--red); height:100%; }
+  .ls-ratio{ color:var(--muted); font-weight:400; }
+  .binance-spark-wrap{ display:flex; flex-direction:column; gap:2px; }
+  .binance-spark{ width:70px; height:20px; display:block; }
 
   /* ---------- depth chart ---------- */
   .depth-tabs{ display:flex; gap:6px; margin-bottom:12px; }
@@ -368,18 +379,24 @@ const ASSETS = [
   { id:'solana', sym:'SOL', name:'Solana' },
   { id:'hyperliquid', sym:'HYPE', name:'Hyperliquid' },
 ];
-const FACTOR_KEYS = ['rsi','ema','macd','bb','obv','vwap','atr','fib','ath','fgi','mom'];
+const FACTOR_KEYS = ['rsi','ema','macd','bb','obv','vwap','atr','fib','ath','fgi','mom','binance'];
 const DERIV_SYMBOLS = { bitcoin:'BTC', ethereum:'ETH', solana:'SOL', hyperliquid:'HYPE' };
 const KRAKEN_PAIRS = { bitcoin:'XBTUSD', ethereum:'ETHUSD', solana:'SOLUSD', hyperliquid:'HYPEUSD' };
 const KRAKEN_INTERVAL = { day:30, swing:240, hodl:1440 };
+// Binance Futures public market-data endpoints (no API key). HYPE has no Binance perp coverage here — deliberately skipped.
+const BINANCE_SYMBOLS = { bitcoin:'BTCUSDT', ethereum:'ETHUSDT', solana:'SOLUSDT' };
+const BINANCE_PERIOD = '15m';
+const BINANCE_CACHE_MS = 5 * 60 * 1000; // ratios are bucketed every 15m anyway — no point refetching every refresh cycle
 
 const STYLE_PARAMS = {
+  // Weights below are the original 11-factor set, proportionally rescaled to make room for
+  // the new 'binance' factor while keeping each style's total at exactly 100.
   day:  { ohlcDays:1,  volDays:1,   rsiPeriod:7,  emaFast:9,  emaSlow:21,
-          weights:{ rsi:15, ema:15, macd:15, bb:15, obv:15, vwap:15, atr:5, fib:5, ath:0, fgi:0, mom:0 }, refresh:60000, tf:'30m' },
+          weights:{ rsi:14, ema:14, macd:13, bb:13, obv:13, vwap:13, atr:5, fib:5, ath:0, fgi:0, mom:0, binance:10 }, refresh:60000, tf:'30m' },
   swing:{ ohlcDays:30, volDays:30, rsiPeriod:14, emaFast:20, emaSlow:50,
-          weights:{ rsi:15, ema:20, macd:15, bb:10, obv:10, vwap:0, atr:5, fib:15, ath:5, fgi:5, mom:0 }, refresh:120000, tf:'4H' },
+          weights:{ rsi:13, ema:18, macd:13, bb:9, obv:9, vwap:0, atr:4, fib:13, ath:4, fgi:5, mom:0, binance:12 }, refresh:120000, tf:'4H' },
   hodl: { ohlcDays:365, volDays:220, rsiPeriod:21, emaFast:50, emaSlow:200,
-          weights:{ rsi:10, ema:10, macd:0, bb:0, obv:0, vwap:0, atr:0, fib:5, ath:30, fgi:25, mom:20 }, refresh:120000, tf:'1D' },
+          weights:{ rsi:9, ema:9, macd:0, bb:0, obv:0, vwap:0, atr:0, fib:5, ath:28, fgi:23, mom:18, binance:8 }, refresh:120000, tf:'1D' },
 };
 
 const I18N = {
@@ -408,7 +425,7 @@ const I18N = {
     sentiment:{ extremeFear:'extreme fear', fear:'fear', neutral:'neutral', greed:'greed', extremeGreed:'extreme greed' },
     why:{ rsiOversold:'RSI oversold', rsiOverbought:'RSI overbought', rsiNeutral:'RSI neutral',
           trendBull:'trend bullish', trendBear:'trend bearish', fib:(v)=>`${v}% Fibonacci retracement`, sentimentPrefix:'sentiment' },
-    factorVals:{ bullish:'bullish', bearish:'bearish', rising:'rising', falling:'falling' },
+    factorVals:{ bullish:'bullish', bearish:'bearish', rising:'rising', falling:'falling', loading:'loading…', na:'n/a' },
     riskLine:(atrPct,stop)=>`Volatility (ATR): ${atrPct}% · reference stop distance: ~${stop}`,
     setup:{
       heading:'Setup levels', longRef:'Long-side reference', shortRef:'Short-side reference', noSetup:'No directional setup — zone is neutral.',
@@ -421,6 +438,10 @@ const I18N = {
     pulse:{ heading:'Perp pulse', source:'via Hyperliquid', shortsPay:'shorts paid', longsPay:'longs pay', openInterest:'Open interest',
       flowBuildBull:'Bullish build-up', flowBuildBear:'Bearish build-up', flowSqueeze:'Short squeeze', flowUnwind:'Long unwind', flowStable:'Stable', flowUnknown:'—',
       unavailable:'Derivatives data unavailable.' },
+    binancePulse:{ heading:'Binance Top Trader Pulse', source:'via Binance Futures', tooltip:'Top 20% of Binance futures traders by margin balance — often called "smart money".',
+      shortSide:'short', longSide:'long', positionRatio:'Pos', accountRatio:'Acct', trend24h:'24h trend',
+      biasBullish:'Bullish bias', biasBearish:'Bearish bias', biasNeutral:'Neutral',
+      notAvailable:'Not available on Binance for this asset.', unavailable:'Binance data unavailable right now.' },
     factors:{
       rsi:{ label:'RSI', full:'RSI (Relative Strength)', explain:'Measures the speed and size of recent price moves on a 0–100 scale. Below 30 suggests oversold, above 70 overbought.' },
       ema:{ label:'Trend (EMA)', full:'Trend / EMA Cross', explain:'Compares a fast and slow moving average. Fast above slow reads bullish, below reads bearish.' },
@@ -433,6 +454,7 @@ const I18N = {
       ath:{ label:'ATH distance', full:'Distance from ATH', explain:'How far price sits below its all-time high — mainly relevant for long-term investors.' },
       fgi:{ label:'Fear & Greed', full:'Fear & Greed Index', explain:'Composite market sentiment score. Extreme fear has historically coincided with attractive entries.' },
       mom:{ label:'Momentum', full:'Momentum', explain:'Percentage price change over a style-matched lookback window.' },
+      binance:{ label:'Binance Top Trader', full:'Binance Top Trader Long/Short Ratio', explain:"How the top 20% of Binance futures traders by margin balance — often called 'smart money' — are positioned right now, contrarian-scored: crowded longs score low (expensive/risky), crowded shorts score high (potential contrarian bounce)." },
     },
     secondary:{
       heading:'Secondary — derivatives', intro:"Live from Hyperliquid's own perp order book. Shown as context, not blended into the score.",
@@ -467,7 +489,7 @@ const I18N = {
     sentiment:{ extremeFear:'extreme Angst', fear:'Angst', neutral:'neutral', greed:'Gier', extremeGreed:'extreme Gier' },
     why:{ rsiOversold:'RSI überverkauft', rsiOverbought:'RSI überkauft', rsiNeutral:'RSI neutral',
           trendBull:'Trend bullisch', trendBear:'Trend bärisch', fib:(v)=>`${v}% Fibonacci-Retracement`, sentimentPrefix:'Sentiment' },
-    factorVals:{ bullish:'bullisch', bearish:'bärisch', rising:'steigend', falling:'fallend' },
+    factorVals:{ bullish:'bullisch', bearish:'bärisch', rising:'steigend', falling:'fallend', loading:'lädt…', na:'n. v.' },
     riskLine:(atrPct,stop)=>`Volatilität (ATR): ${atrPct}% · Referenz-Stop-Abstand: ~${stop}`,
     setup:{
       heading:'Setup-Level', longRef:'Long-Referenz', shortRef:'Short-Referenz', noSetup:'Keine richtungsklare Struktur — Zone ist neutral.',
@@ -480,6 +502,10 @@ const I18N = {
     pulse:{ heading:'Perp Pulse', source:'via Hyperliquid', shortsPay:'Shorts zahlten', longsPay:'Longs zahlen', openInterest:'Open Interest',
       flowBuildBull:'Bullischer Aufbau', flowBuildBear:'Bärischer Aufbau', flowSqueeze:'Short Squeeze', flowUnwind:'Long-Auflösung', flowStable:'Stabil', flowUnknown:'—',
       unavailable:'Derivate-Daten nicht verfügbar.' },
+    binancePulse:{ heading:'Binance Top Trader Pulse', source:'via Binance Futures', tooltip:'Die obersten 20% der Binance-Futures-Trader nach Margin-Guthaben — oft "Smart Money" genannt.',
+      shortSide:'Short', longSide:'Long', positionRatio:'Pos', accountRatio:'Konto', trend24h:'24-Std-Trend',
+      biasBullish:'Bullischer Bias', biasBearish:'Bärischer Bias', biasNeutral:'Neutral',
+      notAvailable:'Für dieses Asset nicht bei Binance verfügbar.', unavailable:'Binance-Daten derzeit nicht verfügbar.' },
     factors:{
       rsi:{ label:'RSI', full:'RSI (Relative Stärke)', explain:'Misst Tempo und Ausmaß jüngster Kursbewegungen (0–100). Unter 30 = überverkauft, über 70 = überkauft.' },
       ema:{ label:'Trend (EMA)', full:'Trend / EMA-Kreuzung', explain:'Vergleicht schnellen mit langsamem Durchschnitt. Schnell über langsam = bullisch, darunter = bärisch.' },
@@ -492,6 +518,7 @@ const I18N = {
       ath:{ label:'ATH-Abstand', full:'Abstand zum Allzeithoch', explain:'Wie weit der Kurs unter seinem Allzeithoch liegt — vor allem für langfristige Investoren relevant.' },
       fgi:{ label:'Fear & Greed', full:'Fear & Greed Index', explain:'Zusammengesetzter Sentiment-Score. Extreme Angst fiel historisch oft mit attraktiven Einstiegen zusammen.' },
       mom:{ label:'Momentum', full:'Momentum', explain:'Prozentuale Kursänderung über ein stilabhängiges Zeitfenster.' },
+      binance:{ label:'Binance Top Trader', full:'Binance Top Trader Long/Short Ratio', explain:'Wie die obersten 20% der Binance-Futures-Trader nach Margin-Guthaben — oft "Smart Money" genannt — gerade positioniert sind, gegenläufig bewertet: überfüllte Longs bekommen einen niedrigen Score (teuer/riskant), überfüllte Shorts einen hohen Score (mögliche gegenläufige Erholung).' },
     },
     secondary:{
       heading:'Sekundär — Derivate', intro:'Live aus Hyperliquids eigenem Perp-Orderbuch. Als Kontext gezeigt, nicht in den Score eingerechnet.',
@@ -691,6 +718,24 @@ function scoreMom(chg){
   if(chg>=-20) return (-chg/20)*100;
   return clamp(100-(Math.abs(chg)-20)*4,0,100);
 }
+// Contrarian scoring for the Binance top-trader long/short ratio: crowded longs (high ratio)
+// score LOW (bearish/expensive), crowded shorts (low ratio) score HIGH (bullish/cheap).
+// Continuous piecewise-linear so small ratio changes move the score smoothly, not in jumps.
+function scoreBinanceRatio(ratio){
+  if(ratio==null) return 50;
+  if(ratio<=0.7) return 100;
+  if(ratio<=1.4) return 100 - (ratio-0.7)/(1.4-0.7)*50;   // 100 -> 50
+  if(ratio<=1.8) return 50 - (ratio-1.4)/(1.8-1.4)*35;    // 50 -> 15
+  return clamp(15 - (ratio-1.8)*15, 0, 15);                // 15 -> 0
+}
+// Position ratio is volume/size-weighted (reflects how much capital is actually leaning
+// long/short), account ratio is a simple headcount — position ratio is weighted higher.
+function scoreBinance(positionRatio, accountRatio){
+  if(positionRatio==null && accountRatio==null) return 50;
+  if(positionRatio==null) return scoreBinanceRatio(accountRatio);
+  if(accountRatio==null) return scoreBinanceRatio(positionRatio);
+  return scoreBinanceRatio(positionRatio)*0.65 + scoreBinanceRatio(accountRatio)*0.35;
+}
 function totalScore(scores, w){
   const wsum = Object.values(w).reduce((a,b)=>a+b,0) || 100;
   let sum=0;
@@ -872,6 +917,64 @@ async function fetchOrderBook(assetId){
   }catch(err){ console.error('Order book fetch failed for', assetId, err); return null; }
 }
 
+// ---------- Binance top-trader long/short ratio (12th indicator) ----------
+// Public market-data endpoints, no API key. Not every browser/network reaches Binance
+// reliably (regional restrictions, occasional CORS inconsistencies) — this is treated
+// exactly like the other providers: best-effort, cached, never blocks the rest of the app.
+let binanceData = {}; // assetId -> { positionRatio, accountRatio, longPct, shortPct, history:[{t,ratio}], ok, fetchedAt }
+
+async function fetchBinanceSeries(endpoint, symbol){
+  const res = await fetch(`https://fapi.binance.com/futures/data/${endpoint}?symbol=${symbol}&period=${BINANCE_PERIOD}&limit=30`);
+  if(!res.ok) throw new Error('Binance '+endpoint+' HTTP '+res.status);
+  const json = await res.json();
+  if(!Array.isArray(json) || json.length===0) throw new Error('empty Binance '+endpoint+' payload');
+  return json.map(p => ({
+    t: Number(p.timestamp),
+    ratio: Number(p.longShortRatio),
+    longAccount: Number(p.longAccount),
+    shortAccount: Number(p.shortAccount),
+  }));
+}
+
+async function fetchBinanceTopTrader(assetId, force){
+  const symbol = BINANCE_SYMBOLS[assetId];
+  if(!symbol) return; // e.g. HYPE — no Binance futures market, left as unavailable by design
+
+  const cached = binanceData[assetId];
+  if(!force && cached && cached.fetchedAt && (Date.now()-cached.fetchedAt) < BINANCE_CACHE_MS) return; // still fresh, skip refetch
+
+  try{
+    const [positionSeries, accountSeries] = await Promise.all([
+      fetchBinanceSeries('topLongShortPositionRatio', symbol),
+      fetchBinanceSeries('topLongShortAccountRatio', symbol),
+    ]);
+    const latestPos = positionSeries[positionSeries.length-1];
+    const latestAcc = accountSeries[accountSeries.length-1];
+    binanceData[assetId] = {
+      positionRatio: latestPos.ratio,
+      accountRatio: latestAcc.ratio,
+      longPct: latestAcc.longAccount*100,
+      shortPct: latestAcc.shortAccount*100,
+      history: positionSeries.map(p=>({ t:p.t, ratio:p.ratio })),
+      ok: true, fetchedAt: Date.now(),
+    };
+  }catch(err){
+    console.error('Binance top-trader fetch failed for', assetId, err);
+    // Keep any previously cached good data; otherwise mark unavailable so the UI can
+    // show a clear "not available" state instead of hanging or silently showing nothing.
+    if(!binanceData[assetId]) binanceData[assetId] = { ok:false, fetchedAt: Date.now() };
+    else binanceData[assetId] = { ...binanceData[assetId], ok:false, fetchedAt: Date.now() };
+  }
+}
+
+async function fetchAllBinanceTopTrader(force){
+  for(const a of ASSETS){
+    await fetchBinanceTopTrader(a.id, force);
+    await new Promise(r=>setTimeout(r, 250)); // stagger to be a considerate neighbor to the API
+  }
+}
+
+
 // ---------- canvas rendering ----------
 function drawCandles(canvas, ohlc, overlays){
   if(!canvas || !ohlc) return;
@@ -1040,6 +1143,13 @@ function buildCards(){
         </div>
         <div class="pulse-body" id="pulseBody-${a.id}"></div>
       </div>
+      <div class="perp-pulse binance-pulse" id="binancePulse-${a.id}">
+        <div class="pulse-head">
+          <span class="pulse-title" id="binancePulseTitle-${a.id}"></span>
+          <span class="pulse-source" id="binancePulseSource-${a.id}"></span>
+        </div>
+        <div class="pulse-body" id="binancePulseBody-${a.id}"></div>
+      </div>
     `;
     grid.appendChild(card);
     document.getElementById('expandBtn-'+a.id).addEventListener('click', ()=>{
@@ -1074,6 +1184,8 @@ function updateWeightSum(){
 
 function renderFactors(id, scores, raw, w){
   const box = document.getElementById('factors-'+id); const L=t(); const fv=L.factorVals;
+  const bd = binanceData[id];
+  const binanceVal = (bd && bd.ok) ? bd.positionRatio.toFixed(2) : (bd && !bd.ok) ? '–' : (BINANCE_SYMBOLS[id] ? L.factorVals.loading : L.factorVals.na);
   const rows = [
     ['rsi', raw.rsi!=null?raw.rsi.toFixed(1):'–'],
     ['ema', raw.emaFast!=null?((raw.emaFast>raw.emaSlow)?fv.bullish:fv.bearish):'–'],
@@ -1086,6 +1198,7 @@ function renderFactors(id, scores, raw, w){
     ['ath', raw.athPct!=null?raw.athPct.toFixed(1)+'%':'–'],
     ['fgi', fgiValue],
     ['mom', raw.mom!=null?raw.mom.toFixed(1)+'%':'–'],
+    ['binance', binanceVal],
   ];
   box.innerHTML = rows.map(([k,val])=>`
     <div class="factor ${w[k]===0?'dim':''}">
@@ -1170,6 +1283,59 @@ function renderDerivatives(assetId){
 }
 function renderAllDerivatives(){ ASSETS.forEach(a=> renderDerivatives(a.id)); }
 
+function binanceSparklineSvg(history, hex){
+  if(!history || history.length<2) return '';
+  const vals = history.map(h=>h.ratio);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const range = (max-min) || 1;
+  const w=100, h=24, pad=2;
+  const pts = vals.map((v,i)=>{
+    const x = (i/(vals.length-1))*w;
+    const y = pad + (h-pad*2) * (1 - (v-min)/range);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" class="binance-spark"><polyline points="${pts}" fill="none" stroke="${hex}" stroke-width="2"/></svg>`;
+}
+
+function renderBinancePulse(assetId){
+  const L = t();
+  const titleEl = document.getElementById('binancePulseTitle-'+assetId);
+  const sourceEl = document.getElementById('binancePulseSource-'+assetId);
+  const bodyEl = document.getElementById('binancePulseBody-'+assetId);
+  if(!titleEl) return;
+  titleEl.textContent = L.binancePulse.heading;
+  titleEl.title = L.binancePulse.tooltip;
+  sourceEl.textContent = L.binancePulse.source;
+
+  if(!BINANCE_SYMBOLS[assetId]){
+    bodyEl.innerHTML = `<div class="pulse-unavailable">${L.binancePulse.notAvailable}</div>`;
+    return;
+  }
+  const bd = binanceData[assetId];
+  if(!bd || !bd.ok){
+    bodyEl.innerHTML = `<div class="pulse-unavailable">${L.binancePulse.unavailable}</div>`;
+    return;
+  }
+
+  const s = scoreBinance(bd.positionRatio, bd.accountRatio);
+  let biasLabel = L.binancePulse.biasNeutral, biasClass = 'flow-neutral';
+  if(s>=65){ biasLabel = L.binancePulse.biasBullish; biasClass = 'flow-bull'; }
+  else if(s<=35){ biasLabel = L.binancePulse.biasBearish; biasClass = 'flow-bear'; }
+  const biasHex = biasClass==='flow-bull' ? '#2FE897' : biasClass==='flow-bear' ? '#FF5C7A' : '#3FE8E0';
+
+  bodyEl.innerHTML = `
+    <div class="funding-row">
+      <div class="funding-labels"><span>${L.binancePulse.shortSide}</span><span>${L.binancePulse.longSide}</span></div>
+      <div class="ls-split-track"><div class="ls-split-short" style="width:${bd.shortPct.toFixed(1)}%"></div><div class="ls-split-long" style="width:${bd.longPct.toFixed(1)}%"></div></div>
+      <div class="funding-val mono">${bd.longPct.toFixed(0)}% / ${bd.shortPct.toFixed(0)}% <span class="ls-ratio">(${L.binancePulse.positionRatio} ${bd.positionRatio.toFixed(2)} · ${L.binancePulse.accountRatio} ${bd.accountRatio.toFixed(2)})</span></div>
+    </div>
+    <div class="pulse-stats">
+      <div class="binance-spark-wrap">${binanceSparklineSvg(bd.history, biasHex)}<div class="oi-label">${L.binancePulse.trend24h}</div></div>
+      <div class="flow-badge ${biasClass}">${biasLabel}</div>
+    </div>`;
+}
+function renderAllBinancePulse(){ ASSETS.forEach(a=> renderBinancePulse(a.id)); }
+
 let lastSignalZone = {};
 function recordSignal(sym, zone, score){
   const key = currentStyle+'-'+sym;
@@ -1193,6 +1359,11 @@ function recomputeAllScores(recordSignals){
     const rawFetch = styleData[currentStyle][a.id];
     const hasFreshData = rawFetch && !rawFetch._error;
     const cached = lastGood[currentStyle][a.id];
+    // Binance top-trader ratio is its own independent data source (like derivatives) —
+    // compute it fresh every time regardless of whether the OHLC-based factors are stale,
+    // so a slow candle fetch never holds back an already-fresh Binance reading or vice versa.
+    const bd = binanceData[a.id];
+    const binanceScore = (bd && bd.ok) ? scoreBinance(bd.positionRatio, bd.accountRatio) : 50;
     let scores, raw;
     if(hasFreshData){
       raw = { ...rawFetch, athPct: m.athPct };
@@ -1204,10 +1375,11 @@ function recomputeAllScores(recordSignals){
         vwap: scoreVWAP(raw.vwap, m.price),
         atr: scoreATR(raw.atr!=null?{atr:raw.atr,atrPrior:raw.atrPrior}:null),
         fib: scoreFib(raw.fibPos), ath: scoreATH(m.athPct), fgi: scoreFGI(fgiValue), mom: scoreMom(raw.mom),
+        binance: binanceScore,
       };
       lastGood[currentStyle][a.id] = { scores, raw };
-    } else if(cached){ raw = cached.raw; scores = cached.scores; }
-    else { raw = {}; scores = { rsi:50, ema:50, macd:50, bb:50, obv:50, vwap:50, atr:50, fib:50, ath:scoreATH(m.athPct), fgi:scoreFGI(fgiValue), mom:50 }; }
+    } else if(cached){ raw = cached.raw; scores = { ...cached.scores, binance: binanceScore }; }
+    else { raw = {}; scores = { rsi:50, ema:50, macd:50, bb:50, obv:50, vwap:50, atr:50, fib:50, ath:scoreATH(m.athPct), fgi:scoreFGI(fgiValue), mom:50, binance: binanceScore }; }
 
     const score = totalScore(scores, w);
     const zone = zoneOf(score);
@@ -1230,6 +1402,7 @@ function recomputeAllScores(recordSignals){
     renderFactors(a.id, scores, raw, w);
     renderRisk(a.id, raw);
     renderSetupLevels(a.id, score, zone.label);
+    renderBinancePulse(a.id);
 
     const note = document.getElementById('note-'+a.id);
     const stale = rawFetch && rawFetch._error;
@@ -1364,6 +1537,13 @@ const FACTOR_ICONS = {
   funding: `<svg viewBox="0 0 240 80" width="100%" height="100%" class="menu-illustration" aria-hidden="true"><line x1="18" y1="42" x2="222" y2="42" stroke="rgba(255,255,255,0.15)" stroke-dasharray="3 3"/><circle cx="120" cy="42" r="4" fill="rgba(255,255,255,0.3)"/><path d="M120,42 L168,20" stroke="#F7B84B" stroke-width="3"/><circle cx="168" cy="20" r="5" fill="#F7B84B"/></svg>`,
   oi: `<svg viewBox="0 0 240 80" width="100%" height="100%" class="menu-illustration" aria-hidden="true"><rect x="26" y="55" width="24" height="15" fill="rgba(255,255,255,0.2)"/><rect x="102" y="32" width="24" height="38" fill="#3FE8E0" opacity="0.85"/><rect x="178" y="10" width="24" height="60" fill="#2FE897"/></svg>`,
   flow: `<svg viewBox="0 0 240 80" width="100%" height="100%" class="menu-illustration" aria-hidden="true"><path d="M18,60 C58,42 98,55 138,32 C168,17 198,26 222,19" fill="none" stroke="#2FE897" stroke-width="2.5"/><path d="M18,70 C58,65 98,54 138,46 C168,39 198,32 222,26" fill="none" stroke="#3FE8E0" stroke-width="2" stroke-dasharray="4 3"/></svg>`,
+  binance: `<svg viewBox="0 0 240 80" width="100%" height="100%" class="menu-illustration" aria-hidden="true">
+    <path d="M110,14 L118,28 L132,18 L126,38 L94,38 L88,18 L102,28 Z" fill="none" stroke="#F7B84B" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="18" y="52" width="90" height="14" rx="7" fill="#2FE897" opacity="0.85"/>
+    <rect x="112" y="52" width="110" height="14" rx="7" fill="#FF5C7A" opacity="0.85"/>
+    <text x="63" y="62" font-size="9" fill="#04141A" text-anchor="middle" dominant-baseline="central">Long</text>
+    <text x="167" y="62" font-size="9" fill="#04141A" text-anchor="middle" dominant-baseline="central">Short</text>
+  </svg>`,
 };
 
 function renderMenu(){
@@ -1483,6 +1663,7 @@ async function refreshAll(){
   try{
     await fetchMarketsAndFGI();
     await fetchStyleData(currentStyle);
+    await fetchAllBinanceTopTrader(); // internally cached (5 min) — cheap no-op most cycles
     recomputeAllScores(true);
     lastStatus = Object.keys(market).length>0 ? 'live' : 'error';
     renderStatus();
