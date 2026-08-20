@@ -126,12 +126,12 @@
   .chg.up{ color:var(--emerald); } .chg.down{ color:var(--red); }
 
   .gauge-chart-row{ display:flex; gap:16px; align-items:center; margin-bottom:10px; }
-  .gauge-wrap{ position:relative; flex:0 0 auto; width:84px; height:84px; }
+  .gauge-wrap{ position:relative; flex:0 0 auto; width:108px; height:108px; }
   .gauge-wrap svg{ width:100%; height:100%; }
   .gauge-center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-  .gauge-num{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:19px; line-height:1; }
-  .gauge-zone{ font-size:8px; color:var(--muted); text-transform:uppercase; letter-spacing:0.4px; margin-top:2px; text-align:center; }
-  .gauge-wave{ position:absolute; bottom:-4px; left:50%; transform:translateX(-50%); width:40px; height:12px; overflow:hidden; opacity:.8; }
+  .gauge-num{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:25px; line-height:1; }
+  .gauge-zone{ font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:0.4px; margin-top:3px; text-align:center; }
+  .gauge-wave{ position:absolute; bottom:-4px; left:50%; transform:translateX(-50%); width:48px; height:14px; overflow:hidden; opacity:.8; }
   .gauge-wave svg{ width:200%; height:100%; animation:waveScroll 4s linear infinite; }
 
   .chart-wrap{ flex:1; min-width:0; }
@@ -198,6 +198,11 @@
   .flow-badge.flow-squeeze{ background:rgba(63,232,224,0.16); color:var(--cyan); }
   .flow-badge.flow-neutral{ background:rgba(255,255,255,0.06); color:var(--muted); }
   .pulse-unavailable{ font-size:11px; color:var(--muted); font-style:italic; }
+
+  .divergence-badge{ display:inline-flex; align-items:center; gap:5px; font-size:10.5px; padding:4px 10px; border-radius:20px; font-weight:600; margin:2px 0 8px; }
+  .divergence-badge[hidden]{ display:none; }
+  .divergence-badge.diverge-bull{ background:rgba(47,232,151,0.14); color:var(--emerald); border:1px solid rgba(47,232,151,0.35); }
+  .divergence-badge.diverge-bear{ background:rgba(255,92,122,0.14); color:var(--red); border:1px solid rgba(255,92,122,0.35); }
 
   .binance-pulse{ margin-top:6px; }
   .binance-pulse .pulse-title{ cursor:help; border-bottom:1px dotted var(--muted); }
@@ -389,15 +394,17 @@ const BINANCE_PERIOD = '15m';
 const BINANCE_CACHE_MS = 5 * 60 * 1000; // ratios are bucketed every 15m anyway — no point refetching every refresh cycle
 
 const STYLE_PARAMS = {
-  // Weights are proportionally rescaled each time a new factor is added, keeping every
-  // style's total at exactly 100. CVD needs Binance taker-volume data (BTC/ETH/SOL only);
-  // Futures Basis reuses data already fetched for Perp Pulse/derivatives, so it covers HYPE too.
+  // Weights reviewed from a professional-trader lens: Day trading now leans harder on VWAP
+  // and CVD (the real-time order-flow tools desks actually watch) at the expense of the
+  // more lagging MACD. Swing leans harder on Fibonacci and Binance positioning (multi-day
+  // tools) at the expense of CVD (a short-horizon signal that loses precision over days).
+  // Hodl was already macro-dominated (ATH+FGI+Momentum ≈ 65%) and needed only a small nudge.
   day:  { ohlcDays:1,  volDays:1,   rsiPeriod:7,  emaFast:9,  emaSlow:21,
-          weights:{ rsi:13, ema:12, macd:11, bb:11, obv:11, vwap:11, atr:4, fib:4, ath:0, fgi:0, mom:0, binance:9, cvd:8, basis:6 }, refresh:60000, tf:'30m' },
+          weights:{ rsi:11, ema:12, macd:8, bb:11, obv:11, vwap:15, atr:5, fib:4, ath:0, fgi:0, mom:0, binance:7, cvd:10, basis:6 }, refresh:60000, tf:'30m' },
   swing:{ ohlcDays:30, volDays:30, rsiPeriod:14, emaFast:20, emaSlow:50,
-          weights:{ rsi:12, ema:14, macd:12, bb:8, obv:8, vwap:0, atr:4, fib:12, ath:4, fgi:4, mom:0, binance:11, cvd:6, basis:5 }, refresh:120000, tf:'4H' },
+          weights:{ rsi:12, ema:14, macd:12, bb:8, obv:8, vwap:0, atr:4, fib:13, ath:4, fgi:4, mom:0, binance:12, cvd:4, basis:5 }, refresh:120000, tf:'4H' },
   hodl: { ohlcDays:365, volDays:220, rsiPeriod:21, emaFast:50, emaSlow:200,
-          weights:{ rsi:8, ema:8, macd:0, bb:0, obv:0, vwap:0, atr:0, fib:5, ath:26, fgi:22, mom:17, binance:8, cvd:3, basis:3 }, refresh:120000, tf:'1D' },
+          weights:{ rsi:8, ema:8, macd:0, bb:0, obv:0, vwap:0, atr:0, fib:5, ath:26, fgi:22, mom:18, binance:7, cvd:3, basis:3 }, refresh:120000, tf:'1D' },
 };
 
 const I18N = {
@@ -412,7 +419,7 @@ const I18N = {
     depthInfoBtn:'What is this?',
     guideLink:'Guide',
     depthInfo:'Every dot on the price axis is a resting limit order on Hyperliquid, added up from the mid-price outward. The <b>green area (bids)</b> shows how much size is waiting to buy below the current price; the <b>red area (asks)</b> shows how much is waiting to sell above it. A tall, steep wall close to the middle means it would take a large market order to move price past that level — a thin, gently sloping side means price could move through it easily. Lopsided depth (one side much taller) can hint at which direction has more resting support right now, but it changes second by second as orders are placed and pulled.',
-    weightsHint:'Default weighting across eleven indicators, tuned per style. Drag to match your own approach.',
+    weightsHint:'Default weighting across fourteen indicators, tuned per style. Drag to match your own approach.',
     weightsTotal:'Total', weightsNormalized:'(normalized)',
     footer:'Data: CoinGecko, Kraken, Hyperliquid, Alternative.me. Not financial advice.',
     menuTitle:'Indicator guide', menuIntro:'How the score for each asset is built.', menuClose:'Close',
@@ -432,6 +439,12 @@ const I18N = {
       heading:'Setup levels', longRef:'Long-side reference', shortRef:'Short-side reference', noSetup:'No directional setup — zone is neutral.',
       entry:'Entry zone', invalidation:'Invalidation', target1:'Target 1', target2:'Target 2', rr:'Reference R:R',
       disclaimer:'Mechanically derived from Fibonacci structure around the current price. Not a trade recommendation — position sizing and risk are your decision.',
+    },
+    divergence:{
+      badgeBull:'Bullish divergence', badgeBear:'Bearish divergence',
+      noteBull:'Price is making new lows while RSI is not — momentum may be fading.',
+      noteBear:'Price is making new highs while RSI is not — the rally may be losing steam.',
+      tooltip:'Price and RSI are moving in opposite directions — a classic early warning that the current trend may be running out of momentum.',
     },
     dataUnavailable:'Live update failed — showing last known data.',
     globalBanner:"No live data could be loaded. If you're seeing this inside a preview pane, open the downloaded file directly in your browser instead.",
@@ -478,7 +491,7 @@ const I18N = {
     depthInfoBtn:'Was bedeutet das?',
     guideLink:'Anleitung',
     depthInfo:'Jeder Punkt auf der Preisachse ist eine offene Limit-Order auf Hyperliquid, kumuliert vom Mittelpreis nach außen. Die <b>grüne Fläche (Bids)</b> zeigt, wie viel Volumen unterhalb des aktuellen Preises zum Kauf bereitsteht; die <b>rote Fläche (Asks)</b> zeigt, wie viel oberhalb zum Verkauf bereitsteht. Eine hohe, steile Wand nahe der Mitte bedeutet, dass eine große Market-Order nötig wäre, um den Preis über dieses Level zu bewegen — eine dünne, flach ansteigende Seite bedeutet, der Preis könnte leicht hindurchlaufen. Eine schiefe Verteilung (eine Seite deutlich höher) kann andeuten, wo gerade mehr Unterstützung liegt, ändert sich aber sekündlich, da Orders laufend platziert und zurückgezogen werden.',
-    weightsHint:'Standardgewichtung über elf Indikatoren, je Stil abgestimmt. Regler verschieben, um es an deine Strategie anzupassen.',
+    weightsHint:'Standardgewichtung über vierzehn Indikatoren, je Stil abgestimmt. Regler verschieben, um es an deine Strategie anzupassen.',
     weightsTotal:'Summe', weightsNormalized:'(normalisiert)',
     footer:'Daten: CoinGecko, Kraken, Hyperliquid, Alternative.me. Keine Anlageberatung.',
     menuTitle:'Indikator-Leitfaden', menuIntro:'So wird der Score für jedes Asset gebildet.', menuClose:'Schließen',
@@ -498,6 +511,12 @@ const I18N = {
       heading:'Setup-Level', longRef:'Long-Referenz', shortRef:'Short-Referenz', noSetup:'Keine richtungsklare Struktur — Zone ist neutral.',
       entry:'Einstiegszone', invalidation:'Invalidierung', target1:'Ziel 1', target2:'Ziel 2', rr:'Referenz-CRV',
       disclaimer:'Mechanisch aus der Fibonacci-Struktur um den aktuellen Preis abgeleitet. Keine Handelsempfehlung — Positionsgröße und Risiko sind deine Entscheidung.',
+    },
+    divergence:{
+      badgeBull:'Bullische Divergenz', badgeBear:'Bärische Divergenz',
+      noteBull:'Der Kurs macht neue Tiefs, der RSI aber nicht — das Momentum lässt möglicherweise nach.',
+      noteBear:'Der Kurs macht neue Hochs, der RSI aber nicht — der Rally könnte die Luft ausgehen.',
+      tooltip:'Kurs und RSI bewegen sich in entgegengesetzte Richtungen — ein klassisches Frühwarnsignal, dass dem aktuellen Trend die Kraft ausgehen könnte.',
     },
     dataUnavailable:'Live-Update fehlgeschlagen — zeigt letzte bekannte Daten.',
     globalBanner:'Es konnten keine Live-Daten geladen werden. Falls du das in einer Vorschau siehst, öffne die Datei direkt im Browser.',
@@ -589,6 +608,40 @@ function computeRSI(closes, period){
   const avgGain=gains/period, avgLoss=losses/period;
   if(avgLoss===0) return 100;
   return 100 - 100/(1+avgGain/avgLoss);
+}
+// RSI at every point over the recent window (not just the latest value) — needed to compare
+// price swings against RSI swings for divergence detection below.
+function computeRSISeries(closes, period, count){
+  const series = [];
+  const start = Math.max(period+1, closes.length-count);
+  for(let i=start; i<=closes.length; i++){
+    series.push(computeRSI(closes.slice(0,i), period));
+  }
+  return series;
+}
+// Classic divergence: split the recent window in half and compare the price extreme in each
+// half against the RSI reading at that same point in time.
+//   Bullish: price sets a LOWER low in the second half, but RSI sets a HIGHER low there —
+//            selling is losing momentum even as price still pushes down.
+//   Bearish: price sets a HIGHER high in the second half, but RSI sets a LOWER high there —
+//            the rally is running on fumes even as price still pushes up.
+// A small RSI-point margin (3) keeps flat noise from being flagged as a real divergence.
+function detectDivergence(closes, rsiSeries){
+  const n = Math.min(closes.length, rsiSeries.length);
+  if(n<20) return null;
+  const c = closes.slice(-n), r = rsiSeries.slice(-n);
+  const mid = Math.floor(n/2);
+  const firstHalfC = c.slice(0,mid), secondHalfC = c.slice(mid);
+
+  const priceLow1 = Math.min(...firstHalfC), priceLow2 = Math.min(...secondHalfC);
+  const idxLow1 = firstHalfC.indexOf(priceLow1), idxLow2 = mid+secondHalfC.indexOf(priceLow2);
+  if(priceLow2 < priceLow1 && r[idxLow2] > r[idxLow1]+3) return 'bullish';
+
+  const priceHigh1 = Math.max(...firstHalfC), priceHigh2 = Math.max(...secondHalfC);
+  const idxHigh1 = firstHalfC.indexOf(priceHigh1), idxHigh2 = mid+secondHalfC.indexOf(priceHigh2);
+  if(priceHigh2 > priceHigh1 && r[idxHigh2] < r[idxHigh1]-3) return 'bearish';
+
+  return null;
 }
 function computeMACD(closes){
   if(closes.length<40) return null;
@@ -853,6 +906,8 @@ function applyStyleData(styleKey, assetId, times, opens, highs, lows, closes, vo
   const cfg = STYLE_PARAMS[styleKey];
   rawOHLC[styleKey][assetId] = { times, opens, highs, lows, closes, volumes };
   const rsi = computeRSI(closes, cfg.rsiPeriod);
+  const rsiSeries = computeRSISeries(closes, cfg.rsiPeriod, 30);
+  const divergence = detectDivergence(closes, rsiSeries);
   const emaFastArr = ema(closes, cfg.emaFast), emaSlowArr = ema(closes, cfg.emaSlow);
   const macd = computeMACD(closes);
   const bb = computeBB(closes);
@@ -865,7 +920,8 @@ function applyStyleData(styleKey, assetId, times, opens, highs, lows, closes, vo
   if(styleKey==='swing' && closes.length>8) mom = (closes[closes.length-1]-closes[closes.length-8])/closes[closes.length-8]*100;
   if(styleKey==='hodl' && closes.length>2) mom = (closes[closes.length-1]-closes[0])/closes[0]*100;
   styleData[styleKey][assetId] = {
-    rsi, emaFast: emaFastArr[emaFastArr.length-1], emaSlow: emaSlowArr[emaSlowArr.length-1],
+    rsi, divergence,
+    emaFast: emaFastArr[emaFastArr.length-1], emaSlow: emaSlowArr[emaSlowArr.length-1],
     emaFastArr, emaSlowArr,
     macdHist: macd?macd.hist:null, macdHistPrev: macd?macd.histPrev:null, macdHistArr: macd?macd.histArr:null,
     bbPercentB: bb?bb.percentB:null, bbUpper: bb?bb.upper:null, bbLower: bb?bb.lower:null,
@@ -1127,10 +1183,10 @@ function gaugeSvg(score, zone){
   const r = 34, circ = 2*Math.PI*r;
   const offset = circ - (score/100)*circ;
   return `<svg viewBox="0 0 84 84">
-    <circle cx="42" cy="42" r="${r}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="8"/>
-    <circle cx="42" cy="42" r="${r}" fill="none" stroke="${zone.hex}" stroke-width="8" stroke-linecap="round"
+    <circle cx="42" cy="42" r="${r}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="9"/>
+    <circle cx="42" cy="42" r="${r}" fill="none" stroke="${zone.hex}" stroke-width="9" stroke-linecap="round"
       stroke-dasharray="${circ}" stroke-dashoffset="${offset}" transform="rotate(-90 42 42)"
-      style="filter:drop-shadow(0 0 5px ${zone.hex}); transition:stroke-dashoffset 1s ease;"/>
+      style="filter:drop-shadow(0 0 8px ${zone.hex}); transition:stroke-dashoffset 1s ease;"/>
   </svg>`;
 }
 function waveSvg(hex){
@@ -1145,11 +1201,12 @@ function generateInsight(sym, scores, raw, score, zone){
   const L = t();
   const rank = FACTOR_KEYS.map(k=>({k, v:scores[k]})).filter(x=>weights[currentStyle][x.k]>0).sort((a,b)=>Math.abs(b.v-50)-Math.abs(a.v-50));
   const top = rank[0];
-  if(!top) return `${sym}: ${zone.label} (${score.toFixed(0)}/100).`;
+  const divergenceNote = raw.divergence ? (' '+ (raw.divergence==='bullish' ? L.divergence.noteBull : L.divergence.noteBear)) : '';
+  if(!top) return `${sym}: ${zone.label} (${score.toFixed(0)}/100).${divergenceNote}`;
   const label = L.factors[top.k].label;
   const strong = top.v>=65 ? (currentLang==='de'?'stark für einen Einstieg':'strongly favors an entry') : top.v<=35 ? (currentLang==='de'?'spricht gegen einen Einstieg':'argues against entry now') : (currentLang==='de'?'ist neutral':'is neutral');
-  if(currentLang==='de') return `${sym}: ${zone.label}-Zone (${score.toFixed(0)}/100) — ${label} ${strong}.`;
-  return `${sym}: ${zone.label} zone (${score.toFixed(0)}/100) — ${label} ${strong}.`;
+  if(currentLang==='de') return `${sym}: ${zone.label}-Zone (${score.toFixed(0)}/100) — ${label} ${strong}.${divergenceNote}`;
+  return `${sym}: ${zone.label} zone (${score.toFixed(0)}/100) — ${label} ${strong}.${divergenceNote}`;
 }
 
 // ---------- UI build ----------
@@ -1195,6 +1252,7 @@ function buildCards(){
         </div>
       </div>
       <div class="insight" id="insight-${a.id}"><span class="tag">Auto insight</span>${t().loading}</div>
+      <div class="divergence-badge" id="divergence-${a.id}" hidden></div>
       <div class="data-note" id="note-${a.id}" hidden></div>
       <div class="setup-levels" id="setup-${a.id}"></div>
       <button class="expand-btn" id="expandBtn-${a.id}">${t().expandMore}</button>
@@ -1318,6 +1376,17 @@ function renderSetupLevels(assetId, score, zoneLabel){
     <div class="setup-rr">${rrText}</div>
     <div class="setup-disclaimer">${L.setup.disclaimer}</div>
   `;
+}
+
+function renderDivergenceBadge(assetId, divergence){
+  const el = document.getElementById('divergence-'+assetId);
+  if(!el) return;
+  if(!divergence){ el.hidden = true; return; }
+  const L = t();
+  el.hidden = false;
+  el.className = 'divergence-badge ' + (divergence==='bullish' ? 'diverge-bull' : 'diverge-bear');
+  el.innerHTML = `<span>⚡</span>${divergence==='bullish' ? L.divergence.badgeBull : L.divergence.badgeBear}`;
+  el.title = L.divergence.tooltip;
 }
 
 function renderDerivatives(assetId){
@@ -1494,6 +1563,7 @@ function recomputeAllScores(recordSignals){
     renderFactors(a.id, scores, raw, w);
     renderRisk(a.id, raw);
     renderSetupLevels(a.id, score, zone.label);
+    renderDivergenceBadge(a.id, raw.divergence);
     renderBinancePulse(a.id);
 
     const note = document.getElementById('note-'+a.id);
