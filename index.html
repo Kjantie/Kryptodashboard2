@@ -1352,7 +1352,6 @@ function renderSignals(){
 }
 
 function recomputeAllScores(recordSignals){
-  const w = weights[currentStyle];
   ASSETS.forEach(a=>{
     const m = market[a.id];
     if(!m) return;
@@ -1363,7 +1362,14 @@ function recomputeAllScores(recordSignals){
     // compute it fresh every time regardless of whether the OHLC-based factors are stale,
     // so a slow candle fetch never holds back an already-fresh Binance reading or vice versa.
     const bd = binanceData[a.id];
-    const binanceScore = (bd && bd.ok) ? scoreBinance(bd.positionRatio, bd.accountRatio) : 50;
+    const binanceAvailable = !!(bd && bd.ok);
+    const binanceScore = binanceAvailable ? scoreBinance(bd.positionRatio, bd.accountRatio) : 50;
+    // When Binance has no market for this asset (or the fetch failed), its weight is excluded
+    // entirely from the total — not just given a neutral score. A neutral score would still
+    // pull the overall result toward 50 with full weight; zeroing the weight instead lets the
+    // remaining eleven factors take over that share, exactly as if the slider had been set to
+    // 0% for this one asset. This keeps HYPE's score fair rather than artificially damped.
+    const w = binanceAvailable ? weights[currentStyle] : { ...weights[currentStyle], binance: 0 };
     let scores, raw;
     if(hasFreshData){
       raw = { ...rawFetch, athPct: m.athPct };
