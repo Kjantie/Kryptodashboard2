@@ -379,7 +379,7 @@ const ASSETS = [
   { id:'solana', sym:'SOL', name:'Solana' },
   { id:'hyperliquid', sym:'HYPE', name:'Hyperliquid' },
 ];
-const FACTOR_KEYS = ['rsi','ema','macd','bb','obv','vwap','atr','fib','ath','fgi','mom','binance'];
+const FACTOR_KEYS = ['rsi','ema','macd','bb','obv','vwap','atr','fib','ath','fgi','mom','binance','cvd','basis'];
 const DERIV_SYMBOLS = { bitcoin:'BTC', ethereum:'ETH', solana:'SOL', hyperliquid:'HYPE' };
 const KRAKEN_PAIRS = { bitcoin:'XBTUSD', ethereum:'ETHUSD', solana:'SOLUSD', hyperliquid:'HYPEUSD' };
 const KRAKEN_INTERVAL = { day:30, swing:240, hodl:1440 };
@@ -389,14 +389,15 @@ const BINANCE_PERIOD = '15m';
 const BINANCE_CACHE_MS = 5 * 60 * 1000; // ratios are bucketed every 15m anyway — no point refetching every refresh cycle
 
 const STYLE_PARAMS = {
-  // Weights below are the original 11-factor set, proportionally rescaled to make room for
-  // the new 'binance' factor while keeping each style's total at exactly 100.
+  // Weights are proportionally rescaled each time a new factor is added, keeping every
+  // style's total at exactly 100. CVD needs Binance taker-volume data (BTC/ETH/SOL only);
+  // Futures Basis reuses data already fetched for Perp Pulse/derivatives, so it covers HYPE too.
   day:  { ohlcDays:1,  volDays:1,   rsiPeriod:7,  emaFast:9,  emaSlow:21,
-          weights:{ rsi:14, ema:14, macd:13, bb:13, obv:13, vwap:13, atr:5, fib:5, ath:0, fgi:0, mom:0, binance:10 }, refresh:60000, tf:'30m' },
+          weights:{ rsi:13, ema:12, macd:11, bb:11, obv:11, vwap:11, atr:4, fib:4, ath:0, fgi:0, mom:0, binance:9, cvd:8, basis:6 }, refresh:60000, tf:'30m' },
   swing:{ ohlcDays:30, volDays:30, rsiPeriod:14, emaFast:20, emaSlow:50,
-          weights:{ rsi:13, ema:18, macd:13, bb:9, obv:9, vwap:0, atr:4, fib:13, ath:4, fgi:5, mom:0, binance:12 }, refresh:120000, tf:'4H' },
+          weights:{ rsi:12, ema:14, macd:12, bb:8, obv:8, vwap:0, atr:4, fib:12, ath:4, fgi:4, mom:0, binance:11, cvd:6, basis:5 }, refresh:120000, tf:'4H' },
   hodl: { ohlcDays:365, volDays:220, rsiPeriod:21, emaFast:50, emaSlow:200,
-          weights:{ rsi:9, ema:9, macd:0, bb:0, obv:0, vwap:0, atr:0, fib:5, ath:28, fgi:23, mom:18, binance:8 }, refresh:120000, tf:'1D' },
+          weights:{ rsi:8, ema:8, macd:0, bb:0, obv:0, vwap:0, atr:0, fib:5, ath:26, fgi:22, mom:17, binance:8, cvd:3, basis:3 }, refresh:120000, tf:'1D' },
 };
 
 const I18N = {
@@ -455,6 +456,8 @@ const I18N = {
       fgi:{ label:'Fear & Greed', full:'Fear & Greed Index', explain:'Composite market sentiment score. Extreme fear has historically coincided with attractive entries.' },
       mom:{ label:'Momentum', full:'Momentum', explain:'Percentage price change over a style-matched lookback window.' },
       binance:{ label:'Binance Top Trader', full:'Binance Top Trader Long/Short Ratio', explain:"How the top 20% of Binance futures traders by margin balance — often called 'smart money' — are positioned right now, contrarian-scored: crowded longs score low (expensive/risky), crowded shorts score high (potential contrarian bounce)." },
+      cvd:{ label:'CVD', full:'Cumulative Volume Delta', explain:"Adds up real aggressive buy volume minus sell volume over time, from actual trade data — a sharper version of OBV. If price falls while CVD keeps climbing, buyers are quietly absorbing the drop (bullish divergence). BTC, ETH and SOL only." },
+      basis:{ label:'Futures Basis', full:'Futures Basis (Perp vs. Spot)', explain:'How far the Hyperliquid perpetual price sits above or below the blended spot price. A rich premium means leveraged longs are paying up to chase price — often overheated. A discount reads the opposite way, contrarian-scored just like funding rate.' },
     },
     secondary:{
       heading:'Secondary — derivatives', intro:"Live from Hyperliquid's own perp order book. Shown as context, not blended into the score.",
@@ -519,6 +522,8 @@ const I18N = {
       fgi:{ label:'Fear & Greed', full:'Fear & Greed Index', explain:'Zusammengesetzter Sentiment-Score. Extreme Angst fiel historisch oft mit attraktiven Einstiegen zusammen.' },
       mom:{ label:'Momentum', full:'Momentum', explain:'Prozentuale Kursänderung über ein stilabhängiges Zeitfenster.' },
       binance:{ label:'Binance Top Trader', full:'Binance Top Trader Long/Short Ratio', explain:'Wie die obersten 20% der Binance-Futures-Trader nach Margin-Guthaben — oft "Smart Money" genannt — gerade positioniert sind, gegenläufig bewertet: überfüllte Longs bekommen einen niedrigen Score (teuer/riskant), überfüllte Shorts einen hohen Score (mögliche gegenläufige Erholung).' },
+      cvd:{ label:'CVD', full:'Cumulative Volume Delta', explain:'Summiert echtes aggressives Kauf- minus Verkaufsvolumen über Zeit, aus echten Trade-Daten — eine schärfere Version von OBV. Fällt der Kurs, während CVD weiter steigt, absorbieren Käufer still den Rückgang (bullische Divergenz). Nur BTC, ETH und SOL.' },
+      basis:{ label:'Futures Basis', full:'Futures Basis (Perp vs. Spot)', explain:'Wie weit der Hyperliquid-Perp-Preis über oder unter dem gemischten Spot-Preis liegt. Eine üppige Prämie bedeutet, gehebelte Longs zahlen drauf, um dem Preis hinterherzujagen — oft überhitzt. Ein Abschlag liest sich umgekehrt, gegenläufig bewertet wie die Funding Rate.' },
     },
     secondary:{
       heading:'Sekundär — Derivate', intro:'Live aus Hyperliquids eigenem Perp-Orderbuch. Als Kontext gezeigt, nicht in den Score eingerechnet.',
@@ -736,6 +741,31 @@ function scoreBinance(positionRatio, accountRatio){
   if(accountRatio==null) return scoreBinanceRatio(positionRatio);
   return scoreBinanceRatio(positionRatio)*0.65 + scoreBinanceRatio(accountRatio)*0.35;
 }
+// CVD (Cumulative Volume Delta): sums actual aggressive taker buy vs sell volume over the
+// lookback window, then reads it the same way OBV does — but on sharper, trade-level data
+// instead of a whole-candle proxy. Divergence between price direction and CVD direction is
+// the signal: price falling while real buying pressure is quietly accumulating (or the
+// reverse) is more informative than either fact alone.
+function scoreCVD(cvdSlope, priceSlope){
+  if(cvdSlope==null || priceSlope==null) return 50;
+  const priceDown = priceSlope<0, priceUp = priceSlope>0;
+  const cvdUp = cvdSlope>0, cvdDown = cvdSlope<0;
+  if(priceDown && cvdUp) return 88;   // bullish divergence — buyers absorbing the dip
+  if(priceUp && cvdUp) return 62;     // healthy confirmation, still fine on a pullback
+  if(priceDown && cvdDown) return 18; // confirmed selling, no hidden support
+  if(priceUp && cvdDown) return 12;   // bearish divergence — rally not backed by real buying
+  return 50;
+}
+// Futures basis: how far the Hyperliquid perp mark price sits from the blended spot price.
+// A rich premium (perp > spot) means leveraged longs are paying up to chase price — often an
+// overheated, expensive entry. A discount (perp < spot) means the opposite. Same contrarian
+// shape as the other derivatives-based factors, just calibrated to typical basis magnitudes
+// (a percent or two is already a large, unusual reading, unlike the 0–3 range of a long/short ratio).
+function scoreBasis(basisPct){
+  if(basisPct==null) return 50;
+  const clamped = clamp(basisPct, -3, 3);
+  return clamp(50 - clamped*15, 0, 100);
+}
 function totalScore(scores, w){
   const wsum = Object.values(w).reduce((a,b)=>a+b,0) || 100;
   let sum=0;
@@ -896,7 +926,7 @@ async function fetchDerivatives(){
       const oiUsd = Number(ctx.openInterest) * markPx;
       const fundingHourly = Number(ctx.funding);
       const prev = derivData[a.id];
-      derivData[a.id] = { fundingHourly, fundingAprPct: fundingHourly*24*365*100, oiUsd, oiPrevUsd: prev && prev.ok ? prev.oiUsd : null, ok:true };
+      derivData[a.id] = { fundingHourly, fundingAprPct: fundingHourly*24*365*100, oiUsd, oiPrevUsd: prev && prev.ok ? prev.oiUsd : null, markPx, ok:true };
     });
   }catch(err){ console.error('Hyperliquid derivatives fetch failed, keeping last known values', err); }
 }
@@ -967,10 +997,47 @@ async function fetchBinanceTopTrader(assetId, force){
   }
 }
 
-async function fetchAllBinanceTopTrader(force){
+// ---------- CVD — Cumulative Volume Delta (13th indicator, BTC/ETH/SOL only) ----------
+// Built from Binance's own taker buy/sell volume endpoint — the aggressive-order side of
+// every trade, not just whole-candle volume — so it reads real buying/selling pressure
+// rather than approximating it the way OBV has to from OHLC data alone.
+let cvdData = {}; // assetId -> { slope, priceSlope, history:[{t,delta}], ok, fetchedAt }
+
+async function fetchCVD(assetId, force){
+  const symbol = BINANCE_SYMBOLS[assetId];
+  if(!symbol) return; // no Binance market for this asset — same "not available" story as Top Trader
+
+  const cached = cvdData[assetId];
+  if(!force && cached && cached.fetchedAt && (Date.now()-cached.fetchedAt) < BINANCE_CACHE_MS) return;
+
+  try{
+    const res = await fetch(`https://fapi.binance.com/futures/data/takerlongshortRatio?symbol=${symbol}&period=${BINANCE_PERIOD}&limit=30`);
+    if(!res.ok) throw new Error('Binance takerlongshortRatio HTTP '+res.status);
+    const json = await res.json();
+    if(!Array.isArray(json) || json.length===0) throw new Error('empty Binance taker volume payload');
+    let running = 0;
+    const history = json.map(p=>{
+      const buy = Number(p.buyVol), sell = Number(p.sellVol);
+      running += (buy - sell);
+      return { t: Number(p.timestamp), delta: running };
+    });
+    const lookback = Math.min(10, history.length-1);
+    const slope = history[history.length-1].delta - history[history.length-1-lookback].delta;
+    cvdData[assetId] = { slope, history, ok:true, fetchedAt: Date.now() };
+  }catch(err){
+    console.error('CVD fetch failed for', assetId, err);
+    if(!cvdData[assetId]) cvdData[assetId] = { ok:false, fetchedAt: Date.now() };
+    else cvdData[assetId] = { ...cvdData[assetId], ok:false, fetchedAt: Date.now() };
+  }
+}
+
+// Binance Top Trader and CVD both hit the same host for the same assets — fetched together
+// per asset (in parallel) rather than as two separate sequential sweeps, so a full refresh
+// isn't stuck waiting through two full stagger passes back to back.
+async function fetchAllBinanceData(force){
   for(const a of ASSETS){
-    await fetchBinanceTopTrader(a.id, force);
-    await new Promise(r=>setTimeout(r, 250)); // stagger to be a considerate neighbor to the API
+    await Promise.all([ fetchBinanceTopTrader(a.id, force), fetchCVD(a.id, force) ]);
+    await new Promise(r=>setTimeout(r, 250)); // stagger between assets to be a considerate neighbor to the API
   }
 }
 
@@ -1186,6 +1253,9 @@ function renderFactors(id, scores, raw, w){
   const box = document.getElementById('factors-'+id); const L=t(); const fv=L.factorVals;
   const bd = binanceData[id];
   const binanceVal = (bd && bd.ok) ? bd.positionRatio.toFixed(2) : (bd && !bd.ok) ? '–' : (BINANCE_SYMBOLS[id] ? L.factorVals.loading : L.factorVals.na);
+  const cd = cvdData[id];
+  const cvdVal = (cd && cd.ok) ? (cd.slope>0?fv.rising:fv.falling) : (cd && !cd.ok) ? '–' : (BINANCE_SYMBOLS[id] ? L.factorVals.loading : L.factorVals.na);
+  const basisVal = raw.basisPct!=null ? (raw.basisPct>=0?'+':'')+raw.basisPct.toFixed(2)+'%' : '–';
   const rows = [
     ['rsi', raw.rsi!=null?raw.rsi.toFixed(1):'–'],
     ['ema', raw.emaFast!=null?((raw.emaFast>raw.emaSlow)?fv.bullish:fv.bearish):'–'],
@@ -1199,6 +1269,8 @@ function renderFactors(id, scores, raw, w){
     ['fgi', fgiValue],
     ['mom', raw.mom!=null?raw.mom.toFixed(1)+'%':'–'],
     ['binance', binanceVal],
+    ['cvd', cvdVal],
+    ['basis', basisVal],
   ];
   box.innerHTML = rows.map(([k,val])=>`
     <div class="factor ${w[k]===0?'dim':''}">
@@ -1358,21 +1430,35 @@ function recomputeAllScores(recordSignals){
     const rawFetch = styleData[currentStyle][a.id];
     const hasFreshData = rawFetch && !rawFetch._error;
     const cached = lastGood[currentStyle][a.id];
-    // Binance top-trader ratio is its own independent data source (like derivatives) —
-    // compute it fresh every time regardless of whether the OHLC-based factors are stale,
-    // so a slow candle fetch never holds back an already-fresh Binance reading or vice versa.
+    // Binance top-trader ratio, CVD and Futures Basis are all independent data sources (like
+    // derivatives) — computed fresh every time regardless of whether the OHLC-based factors
+    // are stale, so a slow candle fetch never holds back an already-fresh reading or vice versa.
     const bd = binanceData[a.id];
     const binanceAvailable = !!(bd && bd.ok);
     const binanceScore = binanceAvailable ? scoreBinance(bd.positionRatio, bd.accountRatio) : 50;
-    // When Binance has no market for this asset (or the fetch failed), its weight is excluded
+
+    const cd = cvdData[a.id];
+    const cvdAvailable = !!(cd && cd.ok);
+    const priceSlopeForCvd = hasFreshData ? rawFetch.priceSlope : (cached ? cached.raw.priceSlope : null);
+    const cvdScore = cvdAvailable ? scoreCVD(cd.slope, priceSlopeForCvd) : 50;
+
+    const dd = derivData[a.id];
+    const basisAvailable = !!(dd && dd.ok && dd.markPx!=null);
+    const basisPct = basisAvailable ? (dd.markPx - m.price)/m.price*100 : null;
+    const basisScore = basisAvailable ? scoreBasis(basisPct) : 50;
+
+    // When a factor has no usable data for this specific asset, its weight is excluded
     // entirely from the total — not just given a neutral score. A neutral score would still
     // pull the overall result toward 50 with full weight; zeroing the weight instead lets the
-    // remaining eleven factors take over that share, exactly as if the slider had been set to
-    // 0% for this one asset. This keeps HYPE's score fair rather than artificially damped.
-    const w = binanceAvailable ? weights[currentStyle] : { ...weights[currentStyle], binance: 0 };
+    // remaining factors take over that share, exactly as if the slider had been set to 0% for
+    // this one asset. (Learned this the hard way with Binance/HYPE — same fix applied up front here.)
+    const w = { ...weights[currentStyle] };
+    if(!binanceAvailable) w.binance = 0;
+    if(!cvdAvailable) w.cvd = 0;
+    if(!basisAvailable) w.basis = 0;
     let scores, raw;
     if(hasFreshData){
-      raw = { ...rawFetch, athPct: m.athPct };
+      raw = { ...rawFetch, athPct: m.athPct, basisPct };
       scores = {
         rsi: scoreRSI(raw.rsi), ema: scoreEMA(m.price, raw.emaFast, raw.emaSlow),
         macd: scoreMACD(raw.macdHist!=null?{hist:raw.macdHist,histPrev:raw.macdHistPrev}:null),
@@ -1381,11 +1467,11 @@ function recomputeAllScores(recordSignals){
         vwap: scoreVWAP(raw.vwap, m.price),
         atr: scoreATR(raw.atr!=null?{atr:raw.atr,atrPrior:raw.atrPrior}:null),
         fib: scoreFib(raw.fibPos), ath: scoreATH(m.athPct), fgi: scoreFGI(fgiValue), mom: scoreMom(raw.mom),
-        binance: binanceScore,
+        binance: binanceScore, cvd: cvdScore, basis: basisScore,
       };
       lastGood[currentStyle][a.id] = { scores, raw };
-    } else if(cached){ raw = cached.raw; scores = { ...cached.scores, binance: binanceScore }; }
-    else { raw = {}; scores = { rsi:50, ema:50, macd:50, bb:50, obv:50, vwap:50, atr:50, fib:50, ath:scoreATH(m.athPct), fgi:scoreFGI(fgiValue), mom:50, binance: binanceScore }; }
+    } else if(cached){ raw = { ...cached.raw, basisPct }; scores = { ...cached.scores, binance: binanceScore, cvd: cvdScore, basis: basisScore }; }
+    else { raw = { basisPct }; scores = { rsi:50, ema:50, macd:50, bb:50, obv:50, vwap:50, atr:50, fib:50, ath:scoreATH(m.athPct), fgi:scoreFGI(fgiValue), mom:50, binance: binanceScore, cvd: cvdScore, basis: basisScore }; }
 
     const score = totalScore(scores, w);
     const zone = zoneOf(score);
@@ -1550,6 +1636,18 @@ const FACTOR_ICONS = {
     <text x="63" y="62" font-size="9" fill="#04141A" text-anchor="middle" dominant-baseline="central">Long</text>
     <text x="167" y="62" font-size="9" fill="#04141A" text-anchor="middle" dominant-baseline="central">Short</text>
   </svg>`,
+  cvd: `<svg viewBox="0 0 240 80" width="100%" height="100%" class="menu-illustration" aria-hidden="true">
+    <path d="M14,60 C60,52 100,40 140,28 C180,18 205,12 226,8" fill="none" stroke="#2FE897" stroke-width="2.5"/>
+    <path d="M14,20 C60,28 100,40 140,52 C180,62 205,66 226,68" fill="none" stroke="#FF5C7A" stroke-width="2" stroke-dasharray="4 3" opacity="0.7"/>
+    <text x="14" y="46" font-size="9" fill="#3FE8E0">CVD</text>
+  </svg>`,
+  basis: `<svg viewBox="0 0 240 80" width="100%" height="100%" class="menu-illustration" aria-hidden="true">
+    <line x1="14" y1="40" x2="226" y2="40" stroke="rgba(255,255,255,0.2)" stroke-dasharray="3 3"/>
+    <text x="14" y="34" font-size="9" fill="#3FE8E0">Spot</text>
+    <line x1="14" y1="42" x2="226" y2="42" stroke="#3FE8E0" stroke-width="2"/>
+    <path d="M14,42 C60,38 100,20 140,16 C180,13 205,12 226,12" fill="none" stroke="#F7B84B" stroke-width="2.5"/>
+    <text x="185" y="8" font-size="9" fill="#F7B84B">Perp</text>
+  </svg>`,
 };
 
 function renderMenu(){
@@ -1669,13 +1767,14 @@ async function refreshAll(){
   try{
     await fetchMarketsAndFGI();
     await fetchStyleData(currentStyle);
-    await fetchAllBinanceTopTrader(); // internally cached (5 min) — cheap no-op most cycles
+    await fetchAllBinanceData(); // Top Trader + CVD together, per asset — internally cached (5 min)
+    await fetchDerivatives(); // moved ahead of recomputeAllScores — the Basis factor needs markPx already in hand
     recomputeAllScores(true);
+    renderAllDerivatives(); // updates the separate Perp Pulse UI block
     lastStatus = Object.keys(market).length>0 ? 'live' : 'error';
     renderStatus();
     if(Object.keys(market).length>0){ lastUpdateTs = new Date(); renderLastUpdate(); }
   }catch(err){ lastStatus='error'; renderStatus(); console.error(err); }
-  fetchDerivatives().then(renderAllDerivatives);
   loadDepth(focusedDepthAsset);
   const banner = document.getElementById('globalBanner');
   const neverLoaded = Object.keys(market).length === 0;
