@@ -143,8 +143,15 @@
   @media (min-width:900px){ .grid{ grid-template-columns:repeat(2,1fr); } }
   .card{ padding:18px; container-type:inline-size; container-name:assetcard; }
   .card-head{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
-  .sym-row{ display:flex; align-items:center; gap:10px; }
-  .sym{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:18px; }
+  .sym-row{ display:flex; align-items:center; gap:12px; }
+  .token-logo{ width:34px; height:34px; border-radius:50%; flex:0 0 auto; box-shadow:0 0 0 1px var(--line), 0 0 14px rgba(63,232,224,0.2); background:var(--glass); }
+  .token-logo-fallback{ width:34px; height:34px; border-radius:50%; flex:0 0 auto; display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px; color:var(--cyan);
+    background:radial-gradient(circle at 35% 30%, rgba(63,232,224,0.22), rgba(47,232,151,0.1));
+    box-shadow:0 0 0 1px var(--line), 0 0 14px rgba(63,232,224,0.2); }
+  .token-logo-fallback[hidden]{ display:none; } /* explicit display:flex above would otherwise win over the bare hidden attribute */
+  .sym{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:22px; letter-spacing:0.3px;
+    text-shadow:0 0 16px rgba(63,232,224,0.3); }
   .name{ color:var(--muted); font-size:11px; }
   .price{ font-family:'IBM Plex Mono',monospace; font-size:17px; text-align:right; }
   .chg{ font-size:11.5px; text-align:right; font-family:'IBM Plex Mono',monospace; }
@@ -1057,7 +1064,7 @@ async function fetchMarketsAndFGI(){
     if(!marketsRes.ok) throw new Error('markets HTTP '+marketsRes.status);
     const markets = await marketsRes.json();
     if(!Array.isArray(markets) || markets.length===0) throw new Error('unexpected markets payload');
-    markets.forEach(m=>{ market[m.id] = { price:m.current_price, chg24h:m.price_change_percentage_24h??0, athPct:m.ath_change_percentage, marketCap:m.market_cap }; });
+    markets.forEach(m=>{ market[m.id] = { price:m.current_price, chg24h:m.price_change_percentage_24h??0, athPct:m.ath_change_percentage, marketCap:m.market_cap, logo:m.image }; });
   }catch(err){ console.error('CoinGecko markets fetch failed, trying Kraken fallback', err); }
   for(const a of ASSETS){
     if(market[a.id]) continue;
@@ -1418,7 +1425,11 @@ function buildCards(){
     const card=document.createElement('div'); card.className='card glass'; card.id='card-'+a.id;
     card.innerHTML = `
       <div class="card-head">
-        <div class="sym-row"><div><div class="sym">${a.sym}</div><div class="name">${a.name}</div></div></div>
+        <div class="sym-row">
+          <img class="token-logo" id="logo-${a.id}" alt="" hidden>
+          <div class="token-logo-fallback" id="logoFallback-${a.id}">${a.sym.slice(0,1)}</div>
+          <div><div class="sym">${a.sym}</div><div class="name">${a.name}</div></div>
+        </div>
         <div><div class="price mono" id="price-${a.id}">—</div><div class="chg mono" id="chg-${a.id}">—</div></div>
       </div>
       <div class="gauge-chart-row">
@@ -1701,6 +1712,22 @@ function renderSignals(){
   el.innerHTML = signals.map(s=>`<div class="signal-row"><span class="signal-time mono">${s.ts.toLocaleTimeString(currentLang==='de'?'de-DE':'en-US')}</span><span><b>${s.sym}</b> → ${s.label} (${s.score.toFixed(0)})</span></div>`).join('');
 }
 
+// Real token logo from CoinGecko (already included in the market data we fetch every cycle —
+// zero extra requests). Starts as a colored letter badge; swaps to the real logo once it has
+// actually finished loading, and falls back to the badge again if the image URL ever fails
+// (missing logo field on the Kraken-fallback price path, broken CDN link, etc.) — never leaves
+// a broken-image icon on screen.
+function renderTokenLogo(assetId){
+  const m = market[assetId];
+  const img = document.getElementById('logo-'+assetId);
+  const fallback = document.getElementById('logoFallback-'+assetId);
+  if(!img || !fallback || !m || !m.logo) return;
+  if(img.dataset.loadedSrc === m.logo) return; // already set — avoid re-triggering a load every refresh cycle
+  img.onload = () => { img.hidden = false; fallback.hidden = true; };
+  img.onerror = () => { img.hidden = true; fallback.hidden = false; };
+  img.dataset.loadedSrc = m.logo;
+  img.src = m.logo;
+}
 function recomputeAllScores(recordSignals){
   ASSETS.forEach(a=>{
     const m = market[a.id];
@@ -1758,6 +1785,7 @@ function recomputeAllScores(recordSignals){
     const chgEl = document.getElementById('chg-'+a.id);
     chgEl.textContent = (m.chg24h>=0?'+':'')+m.chg24h.toFixed(2)+'% 24h';
     chgEl.className = 'chg mono '+(m.chg24h>=0?'up':'down');
+    renderTokenLogo(a.id);
 
     document.getElementById('gauge-'+a.id).innerHTML = gaugeSvg(score, zone) + `<div class="gauge-center"><div class="gauge-num mono" id="score-${a.id}" style="color:${zone.hex}">${score.toFixed(0)}</div><div class="gauge-zone" id="zone-${a.id}">${zone.label}</div></div><div class="gauge-wave">${waveSvg(zone.hex)}</div>`;
 
