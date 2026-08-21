@@ -52,9 +52,15 @@
   .brand .badge{ font-size:11px; padding:4px 10px; border-radius:20px; background:var(--glass); border:1px solid var(--line); color:var(--muted); letter-spacing:0.5px; }
   @media (min-width:640px){ .brand h1{ font-size:52px; } }
   .tagline{ color:var(--muted); font-size:12.5px; max-width:540px; line-height:1.5; }
-  .status{ display:flex; align-items:center; gap:8px; font-size:11px; color:var(--muted); }
-  .dot{ width:6px; height:6px; border-radius:50%; background:var(--emerald); box-shadow:0 0 8px var(--emerald); animation:pulseDot 2s ease-in-out infinite; }
-  @keyframes pulseDot{ 0%,100%{opacity:1;} 50%{opacity:.3;} }
+  .status{ display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--muted); }
+  .status #statusText{ font-weight:600; }
+  .status.is-live #statusText{ color:var(--emerald); }
+  .status.is-error #statusText{ color:var(--red); }
+  .status #lastUpdate{ color:var(--muted); } /* stays neutral even when the status word above changes color */
+  .dot{ width:9px; height:9px; border-radius:50%; background:var(--emerald); box-shadow:0 0 10px 1px var(--emerald); animation:pulseDot 2s ease-in-out infinite; flex:0 0 auto; }
+  .status.is-error .dot{ background:var(--red); box-shadow:0 0 10px 1px var(--red); animation:none; }
+  .status.is-connecting .dot{ background:var(--amber); box-shadow:0 0 10px 1px var(--amber); }
+  @keyframes pulseDot{ 0%,100%{opacity:1; transform:scale(1);} 50%{opacity:.4; transform:scale(0.85);} }
 
   /* ---------- USP strip ---------- */
   .usp-strip{ display:flex; flex-direction:column; gap:12px; padding:14px 16px; border-bottom:1px solid var(--line-soft); }
@@ -357,7 +363,7 @@
       <div class="brand"><h1>TIDE</h1><span class="badge">Terminal</span></div>
       <div class="tagline" id="tagline"></div>
     </div>
-    <div class="status"><span class="dot"></span><span id="statusText"></span><span id="lastUpdate" style="margin-left:8px;"></span></div>
+    <div class="status" id="statusRow"><span class="dot"></span><span id="statusText"></span><span id="lastUpdate" style="margin-left:8px;"></span></div>
   </div>
 </header>
 
@@ -2284,6 +2290,7 @@ function applyStaticText(){
 function renderStatus(){
   const L = t();
   document.getElementById('statusText').textContent = lastStatus==='live' ? L.statusLive : lastStatus==='error' ? L.statusError : L.statusConnecting;
+  document.getElementById('statusRow').className = 'status is-'+(lastStatus||'connecting');
 }
 function renderLastUpdate(){
   const el = document.getElementById('lastUpdate');
