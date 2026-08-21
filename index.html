@@ -278,31 +278,25 @@
   .heatmap-legend-bar{ flex:1; max-width:180px; height:6px; border-radius:3px; background:linear-gradient(90deg,var(--red),rgba(255,255,255,0.1) 50%,var(--emerald)); }
   .heatmap-tile{ cursor:pointer; }
   .heatmap-tile.active-tile{ box-shadow:0 0 0 2px var(--cyan) inset; }
-  .heatmap-detail{ overflow:hidden; max-height:0; opacity:0; transition:max-height .22s ease, opacity .18s ease, margin-top .22s ease; margin-top:0; }
-  .heatmap-detail.open{ max-height:320px; opacity:1; margin-top:16px; }
+  .heatmap-detail{ overflow:hidden; max-height:0; opacity:0; transition:max-height .25s ease, opacity .2s ease, margin-top .25s ease; margin-top:0; }
+  .heatmap-detail.open{ max-height:680px; opacity:1; margin-top:16px; }
   .heatmap-detail-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
-  .heatmap-detail-title{ font-family:'Space Grotesk',sans-serif; font-size:13px; font-weight:600; color:var(--text); }
-  .heatmap-detail-close{ background:var(--glass); border:1px solid var(--line); color:var(--muted); width:24px; height:24px; border-radius:50%; cursor:pointer; font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center; }
+  .heatmap-detail-title{ font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:var(--text); }
+  .heatmap-detail-close{ background:var(--glass); border:1px solid var(--line); color:var(--muted); width:26px; height:26px; border-radius:50%; cursor:pointer; font-size:16px; line-height:1; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
   .heatmap-detail-close:hover{ border-color:var(--cyan); color:var(--cyan); }
   .heatmap-detail-stats{ display:flex; flex-wrap:wrap; gap:16px; margin-bottom:12px; }
   .heatmap-stat{ display:flex; flex-direction:column; gap:2px; }
   .heatmap-stat span{ font-size:9.5px; color:var(--muted-2); text-transform:uppercase; letter-spacing:0.4px; }
   .heatmap-stat b{ font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--text); }
-  .heatmap-stat b.wall-bid{ color:var(--emerald); }
-  .heatmap-stat b.wall-ask{ color:var(--red); }
-  .heatmap-stat b .wall-size{ color:var(--muted); font-weight:400; font-size:11px; }
-  .heatmap-side-bar{ display:flex; height:6px; border-radius:3px; overflow:hidden; flex:1 1 140px; align-self:center; background:rgba(255,255,255,0.06); }
-  .heatmap-side-bid{ background:var(--emerald); height:100%; }
-  .heatmap-side-ask{ background:var(--red); height:100%; }
-  .heatmap-detail-tabs{ display:flex; gap:6px; margin-bottom:10px; }
-  .heatmap-detail-tab{ background:var(--glass); border:1px solid var(--line); color:var(--muted); font-size:11px; padding:5px 12px; border-radius:8px; cursor:pointer; font-family:inherit; }
-  .heatmap-detail-tab.active{ background:rgba(220,120,40,0.18); border-color:rgba(220,120,40,0.5); color:#F7B84B; font-weight:600; }
-  .heatmap-model-disclaimer{ font-size:10px; color:var(--muted-2); line-height:1.5; background:var(--glass-hi); border:1px solid var(--line); border-radius:8px; padding:8px 11px; margin-bottom:10px; }
+  .heatmap-model-disclaimer{ font-size:10.5px; color:var(--muted-2); line-height:1.55; background:var(--glass-hi); border:1px solid var(--line); border-radius:8px; padding:9px 12px; margin-bottom:12px; }
   .depth-tab{ background:var(--glass); border:1px solid var(--line); color:var(--muted); font-size:11.5px; padding:6px 12px; border-radius:8px; cursor:pointer; }
   .depth-tab.active{ border-color:var(--cyan); color:var(--text); }
   .depth-canvas-wrap{ padding:16px; }
   .depth-canvas{ width:100%; height:180px; display:block; }
   .depth-mid{ text-align:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); margin-top:8px; }
+  .liq-canvas-wrap{ padding:14px; }
+  .liq-canvas{ width:100%; height:260px; display:block; border-radius:8px; }
+  @media (max-width:480px){ .liq-canvas{ height:300px; } } /* narrower width means each price band reads shorter — extra height keeps the gradient legible */
 
   /* ---------- correlation heatmap ---------- */
   .corr-table{ padding:16px; }
@@ -429,15 +423,10 @@
           <span class="heatmap-detail-title" id="heatmapDetailTitle"></span>
           <button class="heatmap-detail-close" id="heatmapDetailClose" aria-label="Close">&times;</button>
         </div>
-        <div class="heatmap-detail-tabs" id="heatmapDetailTabs">
-          <button class="heatmap-detail-tab active" data-view="liq" id="heatmapTabLiq"></button>
-          <button class="heatmap-detail-tab" data-view="book" id="heatmapTabBook"></button>
-        </div>
-        <div class="heatmap-model-disclaimer" id="heatmapModelDisclaimer" hidden></div>
+        <div class="heatmap-model-disclaimer" id="heatmapModelDisclaimer"></div>
         <div class="heatmap-detail-stats" id="heatmapDetailStats"></div>
-        <div class="glass depth-canvas-wrap">
-          <canvas class="depth-canvas" id="heatmapDetailCanvas"></canvas>
-          <div class="depth-mid" id="heatmapDetailMid"></div>
+        <div class="glass liq-canvas-wrap">
+          <canvas class="liq-canvas" id="heatmapDetailCanvas"></canvas>
         </div>
       </div>
     </div>
@@ -566,9 +555,7 @@ const I18N = {
     lastUpdatePrefix:'updated', loading:'Loading…',
     blockStyle:'Trading style', blockDepth:'Order book depth', blockCorr:'Correlation', blockMatrix:'Compare all assets', blockSignals:'Live signals', blockWeights:'Weighting',
     heatmap:{ title:'Asset heatmap', statusLive:'Live', statusLoading:'Loading…', loading:'Loading market data…',
-      detailLoading:'Loading…', detailError:'Order book unavailable right now.',
-      bestBid:'Best bid', bestAsk:'Best ask', spread:'Spread', bidWall:'Biggest bid wall', askWall:'Biggest ask wall',
-      tabLiq:'Liquidation estimate', tabBook:'Real order book',
+      detailLoading:'Loading…',
       modelDisclaimer:'Modeled from open interest and typical leverage tiers on Hyperliquid — not real position data. No exchange publishes actual aggregate liquidation levels; this is a mechanical estimate, not a fact.',
       currentPrice:'Current price', hottestZone:'Densest estimated zone' },
     depthInfoBtn:'What is this?',
@@ -647,9 +634,7 @@ const I18N = {
     lastUpdatePrefix:'aktualisiert', loading:'Lädt…',
     blockStyle:'Trading-Stil', blockDepth:'Orderbuch-Tiefe', blockCorr:'Korrelation', blockMatrix:'Alle Assets vergleichen', blockSignals:'Live-Signale', blockWeights:'Gewichtung',
     heatmap:{ title:'Asset-Heatmap', statusLive:'Live', statusLoading:'Lädt…', loading:'Marktdaten werden geladen…',
-      detailLoading:'Lädt…', detailError:'Orderbuch gerade nicht verfügbar.',
-      bestBid:'Bester Bid', bestAsk:'Bester Ask', spread:'Spread', bidWall:'Größte Bid-Wand', askWall:'Größte Ask-Wand',
-      tabLiq:'Liquidations-Schätzung', tabBook:'Echtes Orderbuch',
+      detailLoading:'Lädt…',
       modelDisclaimer:'Modelliert aus Open Interest und typischen Hebel-Stufen auf Hyperliquid — keine echten Positionsdaten. Keine Börse veröffentlicht echte aggregierte Liquidationslevel; das hier ist eine mechanische Schätzung, kein Fakt.',
       currentPrice:'Aktueller Preis', hottestZone:'Dichteste geschätzte Zone' },
     depthInfoBtn:'Was bedeutet das?',
@@ -1910,18 +1895,14 @@ function renderHeatmap(){
   }).join('');
 }
 
-// ---------- heatmap tile detail (order book depth, on demand) ----------
-// Fetched lazily — only when a tile is actually clicked, not for all four assets on every
-// cycle. Reuses the same fetchOrderBook + drawDepth already proven by the dedicated depth
-// section below, just pointed at a second canvas instead of duplicating the logic.
+// ---------- heatmap tile detail (estimated liquidation density, on demand) ----------
+// Computed lazily — only when a tile is actually clicked, not for all four assets on every
+// cycle. Pure client-side math on data already in memory (recent closes + open interest),
+// so opening a tile is instant — no network wait at all.
 let heatmapExpandedAsset = null;
-let heatmapDetailRequestId = 0;
-let heatmapDetailView = 'liq'; // 'liq' = estimated liquidation density (default), 'book' = real order book
-let heatmapDetailBookCache = null; // avoid refetching the real book a second time when just switching tabs
 
 function closeHeatmapDetail(){
   heatmapExpandedAsset = null;
-  heatmapDetailBookCache = null;
   const panel = document.getElementById('heatmapDetail');
   panel.classList.remove('open');
   document.querySelectorAll('#heatmapGrid .heatmap-tile').forEach(el=> el.classList.remove('active-tile'));
@@ -1931,71 +1912,23 @@ function renderHeatmapDetailView(){
   const L = t();
   const asset = ASSETS.find(a=>a.id===heatmapExpandedAsset);
   if(!asset) return;
-  document.getElementById('heatmapTabLiq').classList.toggle('active', heatmapDetailView==='liq');
-  document.getElementById('heatmapTabBook').classList.toggle('active', heatmapDetailView==='book');
   const disclaimer = document.getElementById('heatmapModelDisclaimer');
   const canvas = document.getElementById('heatmapDetailCanvas');
-  const mid = document.getElementById('heatmapDetailMid');
   const statsEl = document.getElementById('heatmapDetailStats');
-
-  if(heatmapDetailView==='liq'){
-    disclaimer.hidden = false;
-    disclaimer.textContent = L.heatmap.modelDisclaimer;
-    mid.textContent = '';
-    const ohlc = rawOHLC[currentStyle][heatmapExpandedAsset];
-    const m = market[heatmapExpandedAsset];
-    if(!ohlc || !m){ statsEl.innerHTML = `<span class="heatmap-empty">${L.heatmap.detailLoading}</span>`; return; }
-    const points = computeLiquidationDensity(ohlc.closes, MAX_LEVERAGE[heatmapExpandedAsset] || 10);
-    drawLiquidationDensity(points, m.price, canvas, statsEl, L);
-  } else {
-    disclaimer.hidden = true;
-    if(heatmapDetailBookCache){
-      renderHeatmapBookStats(heatmapDetailBookCache, canvas, mid, statsEl, L);
-    } else {
-      statsEl.innerHTML = `<span class="heatmap-empty">${L.heatmap.detailLoading}</span>`;
-      const requestId = heatmapDetailRequestId;
-      fetchOrderBook(heatmapExpandedAsset).then(book=>{
-        if(requestId !== heatmapDetailRequestId) return; // superseded by closing/switching assets meanwhile
-        heatmapDetailBookCache = book;
-        if(heatmapDetailView==='book') renderHeatmapBookStats(book, canvas, mid, statsEl, L);
-      });
-    }
-  }
-}
-
-function renderHeatmapBookStats(book, canvas, mid, statsEl, L){
-  if(!book || !book.bids.length || !book.asks.length){
-    statsEl.innerHTML = `<span class="heatmap-empty">${L.heatmap.detailError}</span>`;
-    return;
-  }
-  const walls = drawDepth(book, canvas, mid);
-  const bestBid = book.bids[0].px, bestAsk = book.asks[0].px;
-  const spreadPct = (bestAsk-bestBid)/bestBid*100;
-  const totalBid = book.bids.reduce((s,l)=>s+l.sz,0);
-  const totalAsk = book.asks.reduce((s,l)=>s+l.sz,0);
-  const bidPct = (totalBid/(totalBid+totalAsk||1))*100;
-  statsEl.innerHTML = `
-    <div class="heatmap-stat"><span>${L.heatmap.bestBid}</span><b>${fmtUsd(bestBid)}</b></div>
-    <div class="heatmap-stat"><span>${L.heatmap.bestAsk}</span><b>${fmtUsd(bestAsk)}</b></div>
-    <div class="heatmap-stat"><span>${L.heatmap.spread}</span><b>${spreadPct.toFixed(3)}%</b></div>
-    <div class="heatmap-side-bar"><div class="heatmap-side-bid" style="width:${bidPct}%"></div><div class="heatmap-side-ask" style="width:${100-bidPct}%"></div></div>
-    <div class="heatmap-stat"><span>${L.heatmap.bidWall}</span><b class="wall-bid">${fmtUsd(walls.bidWall.px)} <span class="wall-size">(${walls.bidWall.sz.toFixed(2)})</span></b></div>
-    <div class="heatmap-stat"><span>${L.heatmap.askWall}</span><b class="wall-ask">${fmtUsd(walls.askWall.px)} <span class="wall-size">(${walls.askWall.sz.toFixed(2)})</span></b></div>
-  `;
+  disclaimer.textContent = L.heatmap.modelDisclaimer;
+  const ohlc = rawOHLC[currentStyle][heatmapExpandedAsset];
+  const m = market[heatmapExpandedAsset];
+  if(!ohlc || !m){ statsEl.innerHTML = `<span class="heatmap-empty">${L.heatmap.detailLoading}</span>`; return; }
+  const points = computeLiquidationDensity(ohlc.closes, MAX_LEVERAGE[heatmapExpandedAsset] || 10);
+  drawLiquidationDensity(points, m.price, canvas, statsEl, L);
 }
 
 function openHeatmapDetail(assetId){
   const asset = ASSETS.find(a=>a.id===assetId);
   if(!asset) return;
   heatmapExpandedAsset = assetId;
-  heatmapDetailView = 'liq'; // always start on the estimate — the real book is one tap away, never the reverse assumption
-  heatmapDetailBookCache = null;
-  heatmapDetailRequestId++;
-  const L = t();
 
   document.querySelectorAll('#heatmapGrid .heatmap-tile').forEach(el=> el.classList.toggle('active-tile', el.dataset.asset===assetId));
-  document.getElementById('heatmapTabLiq').textContent = L.heatmap.tabLiq;
-  document.getElementById('heatmapTabBook').textContent = L.heatmap.tabBook;
   const panel = document.getElementById('heatmapDetail');
   panel.hidden = false;
   panel.classList.add('open');
@@ -2011,14 +1944,6 @@ document.getElementById('heatmapGrid').addEventListener('click', (e)=>{
   else openHeatmapDetail(assetId);
 });
 document.getElementById('heatmapDetailClose').addEventListener('click', closeHeatmapDetail);
-document.getElementById('heatmapDetailTabs').addEventListener('click', (e)=>{
-  const tab = e.target.closest ? e.target.closest('.heatmap-detail-tab') : null;
-  if(!tab || !heatmapExpandedAsset) return;
-  const view = tab.dataset.view;
-  if(view===heatmapDetailView) return;
-  heatmapDetailView = view;
-  renderHeatmapDetailView();
-});
 
 function toggleHeatmap(forceOpen){
   const open = forceOpen!=null ? forceOpen : !heatmapState.open;
@@ -2043,15 +1968,17 @@ async function loadDepth(assetId){
   const book = await fetchOrderBook(assetId);
   drawDepth(book, document.getElementById('depthCanvas'), document.getElementById('depthMid'));
 }
-// Heat scale (dark → purple → orange → yellow), deliberately NOT the green/red bid-ask
-// palette used for real order book data — this is a different kind of information (a model,
-// not a fact) and should never be visually confusable with it.
+// Heat scale — a classic 5-stop thermal/plasma gradient (near-black → violet → magenta →
+// orange → bright yellow-white at the peak), deliberately NOT the green/red bid-ask palette
+// used for real order book data elsewhere on the page — this is a different kind of
+// information (a model, not a fact) and should never be visually confusable with it.
 function heatScaleColor(t){
   const stops = [
-    [0.00, [10, 8, 20]],
-    [0.35, [88, 24, 130]],
-    [0.65, [220, 70, 40]],
-    [1.00, [255, 210, 60]],
+    [0.00, [6, 8, 24]],
+    [0.25, [72, 20, 130]],
+    [0.50, [200, 25, 95]],
+    [0.75, [255, 110, 20]],
+    [1.00, [255, 240, 130]],
   ];
   let lo = stops[0], hi = stops[stops.length-1];
   for(let i=0;i<stops.length-1;i++){ if(t>=stops[i][0] && t<=stops[i+1][0]){ lo=stops[i]; hi=stops[i+1]; break; } }
