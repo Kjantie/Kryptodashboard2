@@ -265,8 +265,9 @@
   .heatmap-chevron{ display:inline-block; color:var(--cyan); font-size:12px; transition:transform .18s ease; flex:0 0 auto; }
   .heatmap-header[aria-expanded="true"] .heatmap-chevron{ transform:rotate(90deg); }
   .heatmap-status{ font-size:11px; color:var(--muted); font-family:'IBM Plex Mono',monospace; flex:0 0 auto; }
-  .heatmap-body{ overflow:hidden; max-height:0; opacity:0; transition:max-height .2s ease, opacity .18s ease, margin-top .2s ease; margin-top:0; }
-  .heatmap-body.open{ max-height:400px; opacity:1; margin-top:16px; }
+  .heatmap-body{ display:grid; grid-template-rows:0fr; opacity:0; transition:grid-template-rows .22s ease, opacity .18s ease, margin-top .22s ease; margin-top:0; }
+  .heatmap-body.open{ grid-template-rows:1fr; opacity:1; margin-top:16px; }
+  .heatmap-body-inner{ overflow:hidden; min-height:0; }
   .heatmap-grid{ display:flex; flex-wrap:wrap; gap:5px; align-content:flex-start; }
   .heatmap-tile{ position:relative; border-radius:10px; padding:12px 14px; min-width:90px; flex:1 1 auto; overflow:hidden;
     transition:transform .12s; cursor:default; }
@@ -276,10 +277,14 @@
   .heatmap-empty{ font-size:12.5px; color:var(--muted); font-style:italic; padding:20px 0; text-align:center; }
   .heatmap-legend{ display:flex; align-items:center; gap:8px; margin-top:14px; font-size:10px; color:var(--muted-2); }
   .heatmap-legend-bar{ flex:1; max-width:180px; height:6px; border-radius:3px; background:linear-gradient(90deg,var(--red),rgba(255,255,255,0.1) 50%,var(--emerald)); }
+  .liq-legend{ display:flex; align-items:center; gap:8px; margin-bottom:12px; font-size:9.5px; color:var(--muted-2); }
+  .liq-legend-bar{ flex:1; max-width:220px; height:8px; border-radius:4px;
+    background:linear-gradient(90deg, rgb(40,34,92), rgb(42,84,176), rgb(24,168,176), rgb(255,140,40), rgb(255,248,120)); }
   .heatmap-tile{ cursor:pointer; }
   .heatmap-tile.active-tile{ box-shadow:0 0 0 2px var(--cyan) inset; }
-  .heatmap-detail{ overflow:hidden; max-height:0; opacity:0; transition:max-height .25s ease, opacity .2s ease, margin-top .25s ease; margin-top:0; }
-  .heatmap-detail.open{ max-height:760px; opacity:1; margin-top:16px; }
+  .heatmap-detail{ display:grid; grid-template-rows:0fr; opacity:0; transition:grid-template-rows .3s ease, opacity .22s ease, margin-top .3s ease; margin-top:0; }
+  .heatmap-detail.open{ grid-template-rows:1fr; opacity:1; margin-top:16px; }
+  .heatmap-detail-inner{ overflow:hidden; min-height:0; }
   .heatmap-detail-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
   .heatmap-detail-title{ font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:var(--text); }
   .heatmap-detail-head-right{ display:flex; align-items:center; gap:8px; flex:0 0 auto; }
@@ -301,11 +306,12 @@
   .liq-canvas-row{ display:flex; gap:4px; align-items:stretch; }
   .liq-canvas-row .liq-canvas-wrap{ flex:1 1 auto; min-width:0; }
   .liq-canvas-wrap{ padding:14px; }
-  .liq-canvas{ width:100%; height:300px; display:block; border-radius:8px; }
-  @media (max-width:480px){ .liq-canvas{ height:340px; } } /* narrower width means each price band reads shorter — extra height keeps the gradient legible */
-  .liq-axis{ flex:0 0 auto; width:58px; display:flex; flex-direction:column; justify-content:space-between;
-    padding:14px 2px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--muted); text-align:right; }
-  .liq-axis span{ line-height:1; white-space:nowrap; }
+  .liq-canvas{ width:100%; height:520px; display:block; border-radius:8px; }
+  @media (max-width:480px){ .liq-canvas{ height:560px; } } /* narrower width means each price band reads shorter — extra height keeps the gradient legible */
+  .liq-axis{ flex:0 0 auto; width:58px; padding:14px 2px;
+    font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--muted); text-align:right; }
+  .liq-axis-track{ position:relative; height:100%; }
+  .liq-axis-track span{ position:absolute; right:0; left:0; line-height:1; white-space:nowrap; transform:translateY(-50%); }
 
   /* ---------- correlation heatmap ---------- */
   .corr-table{ padding:16px; }
@@ -425,23 +431,28 @@
       <span class="heatmap-status" id="heatmapStatus"></span>
     </button>
     <div class="heatmap-body" id="heatmapBody" hidden>
-      <div class="heatmap-grid" id="heatmapGrid"></div>
-      <div class="heatmap-legend" id="heatmapLegend"></div>
-      <div class="heatmap-detail" id="heatmapDetail" hidden>
-        <div class="heatmap-detail-head">
-          <span class="heatmap-detail-title" id="heatmapDetailTitle"></span>
-          <div class="heatmap-detail-head-right">
-            <button class="heatmap-model-badge" id="heatmapModelBadge" aria-expanded="false"><span>&#8505;</span><span id="heatmapModelBadgeLabel"></span></button>
-            <button class="heatmap-detail-close" id="heatmapDetailClose" aria-label="Close">&times;</button>
+      <div class="heatmap-body-inner">
+        <div class="heatmap-grid" id="heatmapGrid"></div>
+        <div class="heatmap-legend" id="heatmapLegend"></div>
+        <div class="heatmap-detail" id="heatmapDetail" hidden>
+          <div class="heatmap-detail-inner">
+            <div class="heatmap-detail-head">
+              <span class="heatmap-detail-title" id="heatmapDetailTitle"></span>
+              <div class="heatmap-detail-head-right">
+                <button class="heatmap-model-badge" id="heatmapModelBadge" aria-expanded="false"><span>&#8505;</span><span id="heatmapModelBadgeLabel"></span></button>
+                <button class="heatmap-detail-close" id="heatmapDetailClose" aria-label="Close">&times;</button>
+              </div>
+            </div>
+            <div class="heatmap-model-disclaimer" id="heatmapModelDisclaimer" hidden></div>
+            <div class="heatmap-detail-stats" id="heatmapDetailStats"></div>
+            <div class="liq-legend"><span id="liqLegendLow"></span><div class="liq-legend-bar"></div><span id="liqLegendHigh"></span></div>
+            <div class="liq-canvas-row">
+              <div class="glass liq-canvas-wrap">
+                <canvas class="liq-canvas" id="heatmapDetailCanvas"></canvas>
+              </div>
+              <div class="liq-axis" id="heatmapDetailAxis"></div>
+            </div>
           </div>
-        </div>
-        <div class="heatmap-model-disclaimer" id="heatmapModelDisclaimer" hidden></div>
-        <div class="heatmap-detail-stats" id="heatmapDetailStats"></div>
-        <div class="liq-canvas-row">
-          <div class="glass liq-canvas-wrap">
-            <canvas class="liq-canvas" id="heatmapDetailCanvas"></canvas>
-          </div>
-          <div class="liq-axis" id="heatmapDetailAxis"></div>
         </div>
       </div>
     </div>
@@ -570,7 +581,7 @@ const I18N = {
     lastUpdatePrefix:'updated', loading:'Loading…',
     blockStyle:'Trading style', blockDepth:'Order book depth', blockCorr:'Correlation', blockMatrix:'Compare all assets', blockSignals:'Live signals', blockWeights:'Weighting',
     heatmap:{ title:'Asset heatmap', statusLive:'Live', statusLoading:'Loading…', loading:'Loading market data…',
-      detailLoading:'Loading…', modelBadge:'Model info',
+      detailLoading:'Loading…', modelBadge:'Model info', legendLow:'less crowded', legendHigh:'most crowded',
       modelDisclaimer:'Modeled from open interest and typical leverage tiers on Hyperliquid — not real position data. No exchange publishes actual aggregate liquidation levels; this is a mechanical estimate, not a fact.',
       currentPrice:'Current price', hottestZone:'Densest estimated zone' },
     depthInfoBtn:'What is this?',
@@ -649,7 +660,7 @@ const I18N = {
     lastUpdatePrefix:'aktualisiert', loading:'Lädt…',
     blockStyle:'Trading-Stil', blockDepth:'Orderbuch-Tiefe', blockCorr:'Korrelation', blockMatrix:'Alle Assets vergleichen', blockSignals:'Live-Signale', blockWeights:'Gewichtung',
     heatmap:{ title:'Asset-Heatmap', statusLive:'Live', statusLoading:'Lädt…', loading:'Marktdaten werden geladen…',
-      detailLoading:'Lädt…', modelBadge:'Modell-Info',
+      detailLoading:'Lädt…', modelBadge:'Modell-Info', legendLow:'weniger überfüllt', legendHigh:'am stärksten überfüllt',
       modelDisclaimer:'Modelliert aus Open Interest und typischen Hebel-Stufen auf Hyperliquid — keine echten Positionsdaten. Keine Börse veröffentlicht echte aggregierte Liquidationslevel; das hier ist eine mechanische Schätzung, kein Fakt.',
       currentPrice:'Aktueller Preis', hottestZone:'Dichteste geschätzte Zone' },
     depthInfoBtn:'Was bedeutet das?',
@@ -1929,15 +1940,26 @@ function renderHeatmapDetailView(){
   const L = t();
   const asset = ASSETS.find(a=>a.id===heatmapExpandedAsset);
   if(!asset) return;
-  const canvas = document.getElementById('heatmapDetailCanvas');
   const statsEl = document.getElementById('heatmapDetailStats');
   document.getElementById('heatmapModelDisclaimer').textContent = L.heatmap.modelDisclaimer;
   document.getElementById('heatmapModelBadgeLabel').textContent = L.heatmap.modelBadge;
+  document.getElementById('liqLegendLow').textContent = L.heatmap.legendLow;
+  document.getElementById('liqLegendHigh').textContent = L.heatmap.legendHigh;
   const ohlc = rawOHLC[currentStyle][heatmapExpandedAsset];
   const m = market[heatmapExpandedAsset];
   if(!ohlc || !m){ statsEl.innerHTML = `<span class="heatmap-empty">${L.heatmap.detailLoading}</span>`; return; }
   const points = computeLiquidationDensity(ohlc.closes, MAX_LEVERAGE[heatmapExpandedAsset] || 10);
-  drawLiquidationDensity(points, m.price, canvas, statsEl, document.getElementById('heatmapDetailAxis'), L);
+  // Deferred two animation frames: the panel's own open/close transition (grid-template-rows)
+  // needs to actually start and the browser needs to commit a real layout pass before reading
+  // the canvas's rendered size — measuring immediately after just adding the "open" class can
+  // catch the element mid-transition and misjudge its true, settled height. Two rAFs is the
+  // standard, reliable way to guarantee "wait for layout to actually be current" rather than
+  // guessing at a fixed delay.
+  requestAnimationFrame(()=> requestAnimationFrame(()=>{
+    if(heatmapExpandedAsset !== asset.id) return; // user already switched to a different tile
+    const canvas = document.getElementById('heatmapDetailCanvas');
+    drawLiquidationDensity(points, m.price, canvas, statsEl, document.getElementById('heatmapDetailAxis'), L);
+  }));
 }
 
 function openHeatmapDetail(assetId){
@@ -1983,7 +2005,7 @@ function toggleHeatmap(forceOpen){
   const body = document.getElementById('heatmapBody');
   btn.setAttribute('aria-expanded', String(open));
   body.classList.toggle('open', open);
-  body.hidden = false; // let the max-height transition handle visibility, not the hidden attribute
+  body.hidden = false; // let the grid-template-rows transition handle visibility, not the hidden attribute
   if(open) renderHeatmap(); // reuses already-fetched market data — instant, no loading state needed
   else closeHeatmapDetail(); // don't leave a stale expanded chart open underneath when collapsed
 }
@@ -1997,35 +2019,64 @@ async function loadDepth(assetId){
   const book = await fetchOrderBook(assetId);
   drawDepth(book, document.getElementById('depthCanvas'), document.getElementById('depthMid'));
 }
-// Heat scale — a classic 5-stop thermal/plasma gradient (near-black → violet → magenta →
-// orange → bright yellow-white at the peak), deliberately NOT the green/red bid-ask palette
-// used for real order book data elsewhere on the page — this is a different kind of
-// information (a model, not a fact) and should never be visually confusable with it.
+// Heat scale — researched against real liquidation-heatmap tools (Coinglass and similar):
+// their established convention runs dark purple/blue (cold) → green (medium) → bright yellow
+// (hot) — bright yellow at the peak is the one constant across every source. We follow that
+// purple → blue → warm-cyan → yellow arc, but swap literal green for a blue-leaning teal:
+// green is already this dashboard's fixed meaning for "bid liquidity" in the real order book
+// chart elsewhere on the page, and reusing it here — for a modeled estimate, not real data —
+// would blur a distinction that matters (see the model disclaimer on this same panel).
 function heatScaleColor(t){
+  const boosted = Math.pow(Math.max(0,Math.min(1,t)), 0.42);
   const stops = [
-    [0.00, [6, 8, 24]],
-    [0.25, [72, 20, 130]],
-    [0.50, [200, 25, 95]],
-    [0.75, [255, 110, 20]],
-    [1.00, [255, 240, 130]],
+    [0.00, [40, 34, 92]],
+    [0.20, [42, 84, 176]],
+    [0.42, [24, 168, 176]],
+    [0.62, [255, 140, 40]],
+    [0.82, [255, 200, 40]],
+    [1.00, [255, 248, 120]],
   ];
   let lo = stops[0], hi = stops[stops.length-1];
-  for(let i=0;i<stops.length-1;i++){ if(t>=stops[i][0] && t<=stops[i+1][0]){ lo=stops[i]; hi=stops[i+1]; break; } }
+  for(let i=0;i<stops.length-1;i++){ if(boosted>=stops[i][0] && boosted<=stops[i+1][0]){ lo=stops[i]; hi=stops[i+1]; break; } }
   const span = (hi[0]-lo[0])||1;
-  const f = (t-lo[0])/span;
+  const f = (boosted-lo[0])/span;
   const c = lo[1].map((v,i)=> Math.round(v + (hi[1][i]-v)*f));
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
+// Classic chart-axis rounding: snaps a raw step size to the nearest "nice" 1/2/5×10^n value,
+// so grid lines land on round numbers ($2, $2000, $50000, ...) instead of arbitrary fractions
+// of the price range. The step scales automatically with the asset's own price — a few dollars
+// for HYPE, thousands for BTC — from the same formula.
+function niceAxisStep(rawStep){
+  if(!isFinite(rawStep) || rawStep<=0) return 1; // defensive fallback — a zero/invalid price would otherwise send log10 to -Infinity
+  const exponent = Math.floor(Math.log10(rawStep));
+  const base = Math.pow(10, exponent);
+  const fraction = rawStep/base;
+  let niceFraction;
+  if(fraction < 1.5) niceFraction = 1;
+  else if(fraction < 3) niceFraction = 2;
+  else if(fraction < 7) niceFraction = 5;
+  else niceFraction = 10;
+  return niceFraction * base;
+}
+function computeNiceTicks(minPx, maxPx, targetCount){
+  const step = niceAxisStep((maxPx-minPx)/targetCount);
+  const ticks = [];
+  for(let t=Math.ceil(minPx/step)*step; t<=maxPx+1e-9; t+=step) ticks.push(t);
+  return ticks;
+}
 // Renders the price axis as real HTML text next to the canvas — not drawn onto the heat
 // graphic itself, so the colors stay uncluttered and the numbers stay crisp at any zoom level.
-function renderLiqAxis(minPx, maxPx, axisEl){
-  const ROWS = 6;
-  let html = '';
-  for(let i=ROWS;i>=0;i--){ // top row = highest price, bottom row = lowest — matches the canvas orientation
-    const labelPx = minPx + (maxPx-minPx)*(i/ROWS);
-    html += `<span>${fmtUsd(labelPx)}</span>`;
-  }
-  axisEl.innerHTML = html;
+// Each label is positioned by its actual price (not just evenly divided by count), so it lines
+// up exactly with the matching gridline drawn on the canvas itself.
+function renderLiqAxis(minPx, maxPx, ticks, axisEl){
+  const range = (maxPx-minPx)||1;
+  let inner = '';
+  ticks.slice().reverse().forEach(px=>{ // highest price first, matching the canvas's top-to-bottom orientation
+    const topPct = (1 - (px-minPx)/range) * 100;
+    inner += `<span style="top:${topPct.toFixed(2)}%">${fmtUsd(px)}</span>`;
+  });
+  axisEl.innerHTML = `<div class="liq-axis-track">${inner}</div>`;
 }
 function drawLiquidationDensity(points, currentPrice, canvas, statsEl, axisEl, L){
   const dpr = window.devicePixelRatio||1;
@@ -2035,13 +2086,13 @@ function drawLiquidationDensity(points, currentPrice, canvas, statsEl, axisEl, L
   const ctx = canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
   if(!points || !points.length){ if(statsEl) statsEl.innerHTML=''; if(axisEl) axisEl.innerHTML=''; return; }
 
-  // Tighter, fixed ±25% window around the current price (rather than stretching all the way
-  // out to the widest leverage tier's reach) — the low-leverage tail was diluting resolution
-  // right where it matters most: close to where price actually is.
-  const RANGE_PCT = 0.25;
+  // A slightly wider ±30% window than before (up from ±25%) plus 50% more underlying buckets —
+  // more distinct price bands are now visible without going back to stretching all the way out
+  // to the widest leverage tier's reach, which was the original "too wide" problem.
+  const RANGE_PCT = 0.30;
   const minPx = currentPrice * (1-RANGE_PCT), maxPx = currentPrice * (1+RANGE_PCT);
   const range = (maxPx-minPx)||1;
-  const BUCKETS = 60; // the underlying data resolution — rendering below interpolates this smoothly per pixel row
+  const BUCKETS = 90; // the underlying data resolution — rendering below interpolates this smoothly per pixel row
   const density = new Array(BUCKETS).fill(0);
   points.forEach(p=>{
     const bi = Math.min(BUCKETS-1, Math.max(0, Math.floor((p.px-minPx)/range*BUCKETS)));
@@ -2049,19 +2100,12 @@ function drawLiquidationDensity(points, currentPrice, canvas, statsEl, axisEl, L
   });
   const maxD = Math.max(...density) || 1;
 
-  // Background base layer: every row gets a clearly visible "cold" bar first, regardless of
-  // density. With sparse data (e.g. a calm asset with only a couple of buckets holding real
-  // weight), a bare density-proportional render leaves most of the canvas indistinguishable
-  // from the page background — which is exactly the "I only see one line" problem. Establishing
-  // a visible floor first means the STRUCTURE of the heatmap is always legible even before any
-  // data-driven brightness is layered on top.
-  ctx.fillStyle = 'rgba(46,38,74,0.55)';
-  ctx.fillRect(0, 0, w, h);
-
   // Smooth, per-pixel-row rendering: linearly interpolate density between the two nearest
   // buckets for every screen row instead of drawing 60 hard-edged stripes. This is the same
   // technique real heatmap tools use to avoid a "blocky" look — the eye reads it as a continuous
-  // gradient rather than a staircase.
+  // gradient rather than a staircase. The color scale itself (heatScaleColor) now carries the
+  // visible floor via its own vivid low stop — a separate dark background wash underneath just
+  // made everything look murkier on top of it, so it's gone.
   const MIN_BAR_FRAC = 0.32; // even a zero-density row still shows roughly a third of the width, so nothing reads as "blank"
   for(let y=0; y<h; y++){
     const fracFromTop = y/h;
@@ -2074,16 +2118,16 @@ function drawLiquidationDensity(points, currentPrice, canvas, statsEl, axisEl, L
     const intensity = interpD/maxD;
     const barW = w * (MIN_BAR_FRAC + intensity*(1-MIN_BAR_FRAC));
     ctx.fillStyle = heatScaleColor(intensity);
-    ctx.globalAlpha = 0.55 + intensity*0.45;
+    ctx.globalAlpha = 0.72 + intensity*0.28;
     ctx.fillRect(0, y, barW, 1.5);
   }
   ctx.globalAlpha = 1;
 
-  // Faint gridlines at the same six positions as the HTML axis labels, so the eye has a fixed
-  // reference scale instead of judging price purely by eyeballing position in an empty canvas.
-  const GRID_ROWS = 6;
-  ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
-  for(let i=0;i<=GRID_ROWS;i++){ const gy = h*(i/GRID_ROWS); ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(w,gy); ctx.stroke(); }
+  // Gridlines land on the exact same "nice" round-number ticks as the HTML axis labels next
+  // to the canvas, so the two line up pixel-for-pixel instead of just approximately matching.
+  const niceTicks = computeNiceTicks(minPx, maxPx, 18);
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = 1;
+  niceTicks.forEach(px=>{ const gy = h*(1-(px-minPx)/range); ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(w,gy); ctx.stroke(); });
 
   // Glow-highlighted outline around the hottest contiguous zone — a soft shadow blur makes the
   // single most important takeaway ("here's where it's most concentrated") pop at a glance.
@@ -2099,8 +2143,8 @@ function drawLiquidationDensity(points, currentPrice, canvas, statsEl, axisEl, L
     if((!isHot || i===BUCKETS) && hotStart!==null){
       const yTop = h-i*bucketH, yBot = h-hotStart*bucketH;
       ctx.save();
-      ctx.shadowColor = '#FFD23C'; ctx.shadowBlur = 10;
-      ctx.strokeStyle = '#FFD23C'; ctx.lineWidth = 1.75;
+      ctx.shadowColor = 'rgba(255,255,255,0.9)'; ctx.shadowBlur = 9;
+      ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1.75;
       ctx.strokeRect(1, yTop, hotMaxW-2, yBot-yTop);
       ctx.restore();
       hotStart = null; hotMaxW = 0;
@@ -2116,7 +2160,7 @@ function drawLiquidationDensity(points, currentPrice, canvas, statsEl, axisEl, L
   // Price labels live in a separate HTML column next to the canvas (renderLiqAxis) instead of
   // being drawn as text inside the heat graphic itself — crisper text, and the colors read on
   // their own without labels competing for the same pixels.
-  if(axisEl) renderLiqAxis(minPx, maxPx, axisEl);
+  if(axisEl) renderLiqAxis(minPx, maxPx, niceTicks, axisEl);
 
   if(statsEl){
     const hottest = density.indexOf(maxD);
