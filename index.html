@@ -183,6 +183,10 @@
   .pulse-hb svg{ width:200%; height:100%; animation:hbScroll 2.6s linear infinite; }
   .pulse-title{ font-family:'Space Grotesk',sans-serif; font-size:10px; letter-spacing:0.7px; text-transform:uppercase; color:var(--muted); }
   .pulse-source{ font-size:9.5px; color:var(--muted-2); margin-left:auto; }
+  .pulse-info-btn{ flex:0 0 auto; width:18px; height:18px; border-radius:50%; background:var(--glass); border:1px solid var(--line); color:var(--muted); font-family:'Space Grotesk',sans-serif; font-size:10px; font-weight:700; font-style:italic; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
+  .pulse-info-btn:hover, .pulse-info-btn.active{ border-color:var(--cyan); color:var(--cyan); }
+  .pulse-caption{ font-size:10.5px; color:var(--muted); line-height:1.5; padding:8px 10px; margin-bottom:8px; background:var(--glass-hi); border-radius:8px; border:1px solid var(--line); }
+  .pulse-caption[hidden]{ display:none; }
   .pulse-body{ display:grid; grid-template-columns:1fr; gap:9px; }
   @container assetcard (min-width:420px){ .pulse-body{ grid-template-columns:1.3fr 1fr; align-items:center; } }
   .funding-labels{ display:flex; justify-content:space-between; color:var(--muted); font-size:9px; margin-bottom:4px; }
@@ -1266,8 +1270,10 @@ function buildCards(){
         <div class="pulse-head">
           <div class="pulse-hb">${hbSvg('#3FE8E0')}</div>
           <span class="pulse-title" id="pulseTitle-${a.id}"></span>
+          <button class="pulse-info-btn" id="pulseInfoBtn-${a.id}" aria-expanded="false" aria-label="What do the colors mean?">?</button>
           <span class="pulse-source" id="pulseSource-${a.id}"></span>
         </div>
+        <div class="pulse-caption" id="pulseCaption-${a.id}" hidden></div>
         <div class="pulse-body" id="pulseBody-${a.id}"></div>
       </div>
       <div class="perp-pulse binance-pulse" id="binancePulse-${a.id}">
@@ -1279,6 +1285,15 @@ function buildCards(){
       </div>
     `;
     grid.appendChild(card);
+    const pulseInfoBtn = document.getElementById('pulseInfoBtn-'+a.id);
+    pulseInfoBtn.addEventListener('click', ()=>{
+      const caption = document.getElementById('pulseCaption-'+a.id);
+      const open = caption.hidden;
+      caption.hidden = !open;
+      pulseInfoBtn.setAttribute('aria-expanded', String(open));
+      pulseInfoBtn.classList.toggle('active', open);
+      if(open) caption.textContent = t().pulse.fundingTooltip;
+    });
     document.getElementById('expandBtn-'+a.id).addEventListener('click', ()=>{
       expandedCards[a.id] = !expandedCards[a.id];
       document.getElementById('detail-'+a.id).classList.toggle('open', expandedCards[a.id]);
@@ -1771,6 +1786,10 @@ function applyStaticText(){
   const banner = document.getElementById('globalBanner');
   if(!banner.hidden) banner.textContent = L.globalBanner;
   if(!document.getElementById('depthInfo').hidden) renderDepthInfo();
+  ASSETS.forEach(a=>{
+    const cap = document.getElementById('pulseCaption-'+a.id);
+    if(cap && !cap.hidden) cap.textContent = L.pulse.fundingTooltip;
+  });
 }
 function renderStatus(){
   const L = t();
