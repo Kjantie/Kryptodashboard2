@@ -2037,50 +2037,72 @@ function drawLiquidationDensity(points, currentPrice, canvas, statsEl, axisEl, L
 
   // Tighter, fixed ±25% window around the current price (rather than stretching all the way
   // out to the widest leverage tier's reach) — the low-leverage tail was diluting resolution
-  // right where it matters most: close to where price actually is. Any point beyond this
-  // window still lands in the nearest edge bucket, so its weight isn't lost, just compressed.
+  // right where it matters most: close to where price actually is.
   const RANGE_PCT = 0.25;
   const minPx = currentPrice * (1-RANGE_PCT), maxPx = currentPrice * (1+RANGE_PCT);
   const range = (maxPx-minPx)||1;
-  const BUCKETS = 100; // twice the resolution of the previous version within a narrower window
+  const BUCKETS = 60; // the underlying data resolution — rendering below interpolates this smoothly per pixel row
   const density = new Array(BUCKETS).fill(0);
   points.forEach(p=>{
     const bi = Math.min(BUCKETS-1, Math.max(0, Math.floor((p.px-minPx)/range*BUCKETS)));
     density[bi] += p.w;
   });
   const maxD = Math.max(...density) || 1;
-  const bucketH = h/BUCKETS;
-  const HOT_THRESHOLD = 0.7; // buckets at or above 70% of the peak density get an explicit outline
-  // Bar WIDTH now carries the actual "how much" — color intensity alone made every row look
-  // roughly the same mass with just a slightly different tint, which read as "no volume visible".
-  // A thin sliver floor keeps near-empty rows faintly present rather than invisible.
-  const MIN_BAR_FRAC = 0.06;
-  for(let i=0;i<BUCKETS;i++){
-    const intensity = density[i]/maxD;
+
+  // Background base layer: every row gets a clearly visible "cold" bar first, regardless of
+  // density. With sparse data (e.g. a calm asset with only a couple of buckets holding real
+  // weight), a bare density-proportional render leaves most of the canvas indistinguishable
+  // from the page background — which is exactly the "I only see one line" problem. Establishing
+  // a visible floor first means the STRUCTURE of the heatmap is always legible even before any
+  // data-driven brightness is layered on top.
+  ctx.fillStyle = 'rgba(46,38,74,0.55)';
+  ctx.fillRect(0, 0, w, h);
+
+  // Smooth, per-pixel-row rendering: linearly interpolate density between the two nearest
+  // buckets for every screen row instead of drawing 60 hard-edged stripes. This is the same
+  // technique real heatmap tools use to avoid a "blocky" look — the eye reads it as a continuous
+  // gradient rather than a staircase.
+  const MIN_BAR_FRAC = 0.32; // even a zero-density row still shows roughly a third of the width, so nothing reads as "blank"
+  for(let y=0; y<h; y++){
+    const fracFromTop = y/h;
+    const bucketPos = (1-fracFromTop) * BUCKETS; // bottom of canvas = bucket 0 = minPx
+    const bi0 = Math.floor(bucketPos-0.5), bi1 = bi0+1;
+    const f = (bucketPos-0.5) - bi0;
+    const d0 = density[Math.min(BUCKETS-1,Math.max(0,bi0))] || 0;
+    const d1 = density[Math.min(BUCKETS-1,Math.max(0,bi1))] || 0;
+    const interpD = d0 + (d1-d0)*Math.max(0,Math.min(1,f));
+    const intensity = interpD/maxD;
     const barW = w * (MIN_BAR_FRAC + intensity*(1-MIN_BAR_FRAC));
     ctx.fillStyle = heatScaleColor(intensity);
-    ctx.globalAlpha = 0.35 + intensity*0.6;
-    // price axis runs bottom(low)->top(high); bucket 0 = minPx
-    ctx.fillRect(0, h-(i+1)*bucketH, barW, bucketH+0.5);
+    ctx.globalAlpha = 0.55 + intensity*0.45;
+    ctx.fillRect(0, y, barW, 1.5);
   }
   ctx.globalAlpha = 1;
-  // A second pass draws a bright outline around every hot band as one continuous shape (rather
-  // than framing each bucket separately, which would look like a row of boxes) so the densest
-  // price range reads as a single clearly-marked zone, not just "somewhat brighter than nearby rows".
-  // Uses the WIDEST bar within the zone so the outline always fully encloses every bar in that
-  // span, even though individual rows within the same "hot" band can still differ slightly in width.
+
+  // Faint gridlines at the same six positions as the HTML axis labels, so the eye has a fixed
+  // reference scale instead of judging price purely by eyeballing position in an empty canvas.
+  const GRID_ROWS = 6;
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
+  for(let i=0;i<=GRID_ROWS;i++){ const gy = h*(i/GRID_ROWS); ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(w,gy); ctx.stroke(); }
+
+  // Glow-highlighted outline around the hottest contiguous zone — a soft shadow blur makes the
+  // single most important takeaway ("here's where it's most concentrated") pop at a glance.
+  const bucketH = h/BUCKETS;
+  const HOT_THRESHOLD = 0.7;
   let hotStart = null, hotMaxW = 0;
   for(let i=0;i<=BUCKETS;i++){
     const isHot = i<BUCKETS && (density[i]/maxD) >= HOT_THRESHOLD;
     if(isHot){
       if(hotStart===null) hotStart = i;
-      const barW = w * (MIN_BAR_FRAC + (density[i]/maxD)*(1-MIN_BAR_FRAC));
-      hotMaxW = Math.max(hotMaxW, barW);
+      hotMaxW = Math.max(hotMaxW, w*(MIN_BAR_FRAC+(density[i]/maxD)*(1-MIN_BAR_FRAC)));
     }
     if((!isHot || i===BUCKETS) && hotStart!==null){
       const yTop = h-i*bucketH, yBot = h-hotStart*bucketH;
-      ctx.strokeStyle = '#FFD23C'; ctx.lineWidth = 1.5;
+      ctx.save();
+      ctx.shadowColor = '#FFD23C'; ctx.shadowBlur = 10;
+      ctx.strokeStyle = '#FFD23C'; ctx.lineWidth = 1.75;
       ctx.strokeRect(1, yTop, hotMaxW-2, yBot-yTop);
+      ctx.restore();
       hotStart = null; hotMaxW = 0;
     }
   }
@@ -2088,12 +2110,12 @@ function drawLiquidationDensity(points, currentPrice, canvas, statsEl, axisEl, L
   // current price marker — kept as a plain reference line; its value is already shown as text
   // in the stats row above, so it doesn't need its own in-canvas label anymore either.
   const curY = h - ((currentPrice-minPx)/range)*h;
-  ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.setLineDash([4,3]); ctx.lineWidth=1.2;
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.setLineDash([4,3]); ctx.lineWidth=1.3;
   ctx.beginPath(); ctx.moveTo(0,curY); ctx.lineTo(w,curY); ctx.stroke(); ctx.setLineDash([]);
 
-  // Price labels now live in a separate HTML column next to the canvas (renderLiqAxis) instead
-  // of being drawn as text inside the heat graphic itself — crisper text, and the colors read
-  // on their own without labels competing for the same pixels.
+  // Price labels live in a separate HTML column next to the canvas (renderLiqAxis) instead of
+  // being drawn as text inside the heat graphic itself — crisper text, and the colors read on
+  // their own without labels competing for the same pixels.
   if(axisEl) renderLiqAxis(minPx, maxPx, axisEl);
 
   if(statsEl){
