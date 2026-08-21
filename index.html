@@ -115,7 +115,9 @@
   .block-title .kbd{ font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--muted-2); border:1px solid var(--line); border-radius:4px; padding:1px 5px; }
 
   /* ---------- style/timeframe tabs ---------- */
-  .styletabs{ display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  .styletabs{ display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;
+    position:sticky; top:0; z-index:30; background:var(--bg);
+    padding:12px 0; margin-top:-12px; border-bottom:1px solid var(--line-soft); }
   .styletab{ flex:1 1 auto; text-align:left; background:var(--glass); border:1px solid var(--line); color:var(--muted); padding:10px 14px; border-radius:12px; cursor:pointer; transition:all .25s; }
   .styletab .st-name{ font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13px; color:var(--text); display:block; }
   .styletab .st-tf{ font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--muted); }
@@ -207,7 +209,7 @@
   .pulse-body{ display:grid; grid-template-columns:1fr; gap:9px; }
   @container assetcard (min-width:420px){ .pulse-body{ grid-template-columns:1.3fr 1fr; align-items:center; } }
   .funding-labels{ display:flex; justify-content:space-between; color:var(--muted); font-size:9px; margin-bottom:4px; }
-  .funding-track{ position:relative; height:5px; border-radius:3px; background:linear-gradient(90deg,var(--emerald),rgba(255,255,255,0.06) 48%,rgba(255,255,255,0.06) 52%,var(--red)); cursor:help; }
+  .funding-track{ position:relative; height:5px; border-radius:3px; background:linear-gradient(90deg,var(--amber),rgba(255,255,255,0.06) 48%,rgba(255,255,255,0.06) 52%,var(--cyan)); cursor:help; }
   .funding-marker{ position:absolute; top:50%; width:9px; height:9px; border-radius:50%; background:#fff; box-shadow:0 0 8px rgba(255,255,255,.6); transform:translate(-50%,-50%); transition:left .8s ease; }
   .funding-val{ margin-top:4px; font-family:'IBM Plex Mono',monospace; font-size:11px; }
   .pulse-stats{ display:flex; justify-content:space-between; align-items:flex-end; gap:8px; }
@@ -228,8 +230,8 @@
   .binance-pulse{ margin-top:6px; }
   .binance-pulse .pulse-title{ cursor:help; border-bottom:1px dotted var(--muted); }
   .ls-split-track{ display:flex; height:6px; border-radius:3px; overflow:hidden; background:rgba(255,255,255,0.06); }
-  .ls-split-long{ background:var(--emerald); height:100%; }
-  .ls-split-short{ background:var(--red); height:100%; }
+  .ls-split-long{ background:var(--cyan); height:100%; }
+  .ls-split-short{ background:var(--amber); height:100%; }
   .ls-ratio{ color:var(--muted); font-weight:400; }
   .binance-spark-wrap{ display:flex; flex-direction:column; gap:2px; }
   .binance-spark{ width:70px; height:20px; display:block; }
@@ -380,7 +382,10 @@
   </section>
 
   <section class="block">
-    <p class="block-title" id="blockWeightsTitle"></p>
+    <div class="block-title-row">
+      <p class="block-title" id="blockWeightsTitle"></p>
+      <button class="info-btn" id="resetWeightsBtn"><span class="info-icon">&#8635;</span><span id="resetWeightsBtnLabel"></span></button>
+    </div>
     <div class="glass weights">
       <p class="hint" id="weightsHint"></p>
       <div class="wgrid" id="weightRows"></div>
@@ -446,6 +451,7 @@ const I18N = {
     guideLink:'Guide',
     depthInfo:'Think of it like a waiting line at a shop. The <b>green side</b> shows how many people are lined up ready to buy if the price drops a little. The <b>red side</b> shows how many are ready to sell if it rises a little. A tall wall means a lot of people are waiting right there, so the price has a harder time pushing through it. This changes constantly as people join or leave the line.',
     weightsHint:'Default weighting across fourteen indicators, tuned per style. Drag to match your own approach.',
+    resetWeightsBtn:'Reset', weightsResetToast:'Weighting reset to defaults',
     weightsTotal:'Total', weightsNormalized:'(normalized)',
     footer:'Data: CoinGecko, Kraken, Hyperliquid, Alternative.me. Not financial advice.',
     menuTitle:'Indicator guide', menuIntro:'How the score for each asset is built.', menuClose:'Close',
@@ -519,6 +525,7 @@ const I18N = {
     guideLink:'Anleitung',
     depthInfo:'Stell es dir wie eine Warteschlange vor einem Laden vor. Die <b>grüne Seite</b> zeigt, wie viele bereitstehen zu kaufen, falls der Kurs etwas fällt. Die <b>rote Seite</b> zeigt, wie viele bereitstehen zu verkaufen, falls er etwas steigt. Eine hohe Wand bedeutet, dort warten viele — der Kurs kommt schwerer durch. Das ändert sich ständig, weil Leute sich ein- und ausreihen.',
     weightsHint:'Standardgewichtung über vierzehn Indikatoren, je Stil abgestimmt. Regler verschieben, um es an deine Strategie anzupassen.',
+    resetWeightsBtn:'Zurücksetzen', weightsResetToast:'Gewichtung auf Standard zurückgesetzt',
     weightsTotal:'Summe', weightsNormalized:'(normalisiert)',
     footer:'Daten: CoinGecko, Kraken, Hyperliquid, Alternative.me. Keine Anlageberatung.',
     menuTitle:'Indikator-Leitfaden', menuIntro:'So wird der Score für jedes Asset gebildet.', menuClose:'Schließen',
@@ -583,7 +590,14 @@ const I18N = {
 };
 let currentLang = 'en';
 function t(){ return I18N[currentLang]; }
-let currentStyle = 'day';
+const STYLE_STORAGE_KEY = 'tide_style';
+let currentStyle = (function(){
+  try{
+    const saved = localStorage.getItem(STYLE_STORAGE_KEY);
+    if(saved && ['day','swing','hodl'].includes(saved)) return saved;
+  }catch(e){ /* localStorage unavailable (private mode, blocked cookies, etc.) — silently fall back */ }
+  return 'day';
+})();
 let weights = {};
 Object.keys(STYLE_PARAMS).forEach(k => weights[k] = {...STYLE_PARAMS[k].weights});
 
@@ -1255,6 +1269,7 @@ function buildStyleTabs(){
 function switchStyle(key){
   if(key===currentStyle) return;
   currentStyle = key;
+  try{ localStorage.setItem(STYLE_STORAGE_KEY, key); }catch(e){ /* storage blocked — style just won't persist this session */ }
   document.querySelectorAll('.styletab').forEach(tb=> tb.classList.toggle('active', tb.dataset.style===key));
   document.getElementById('styleDesc').textContent = t().styles[currentStyle].desc;
   buildWeightSliders();
@@ -1347,6 +1362,14 @@ function updateWeightSum(){
   const el=document.getElementById('wsum'); const L=t();
   el.textContent=L.weightsTotal+': '+sum+'%'+(sum!==100?' '+L.weightsNormalized:'');
   el.className='wsum'+(sum===0?' bad':'');
+}
+function resetWeights(){
+  // STYLE_PARAMS itself is never mutated by the sliders — only the live copy in `weights` is —
+  // so it's always a clean, reliable source to restore the recommended defaults from.
+  weights[currentStyle] = { ...STYLE_PARAMS[currentStyle].weights };
+  buildWeightSliders();
+  recomputeAllScores();
+  showToast(t().weightsResetToast);
 }
 
 function renderFactors(id, scores, raw, w){
@@ -1792,6 +1815,7 @@ function applyStaticText(){
   document.getElementById('blockMatrixTitle').textContent = L.blockMatrix;
   document.getElementById('blockSignalsTitle').textContent = L.blockSignals;
   document.getElementById('blockWeightsTitle').textContent = L.blockWeights;
+  document.getElementById('resetWeightsBtnLabel').textContent = L.resetWeightsBtn;
   document.getElementById('weightsHint').textContent = L.weightsHint;
   document.getElementById('footerText').textContent = L.footer;
   const footerGuide = document.getElementById('footerGuideLink');
@@ -1841,6 +1865,7 @@ const menuOverlay = document.getElementById('menuOverlay');
 function openMenu(){ renderMenu(); menuOverlay.hidden=false; document.body.style.overflow='hidden'; }
 function closeMenu(){ menuOverlay.hidden=true; document.body.style.overflow=''; }
 document.getElementById('menuBtn').addEventListener('click', openMenu);
+document.getElementById('resetWeightsBtn').addEventListener('click', resetWeights);
 document.getElementById('menuCloseBtn').addEventListener('click', closeMenu);
 menuOverlay.addEventListener('click', e=>{ if(e.target===menuOverlay) closeMenu(); });
 
