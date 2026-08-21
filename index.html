@@ -422,7 +422,7 @@ const I18N = {
     blockStyle:'Trading style', blockDepth:'Order book depth', blockCorr:'Correlation', blockMatrix:'Compare all assets', blockSignals:'Live signals', blockWeights:'Weighting',
     depthInfoBtn:'What is this?',
     guideLink:'Guide',
-    depthInfo:'Every dot on the price axis is a resting limit order on Hyperliquid, added up from the mid-price outward. The <b>green area (bids)</b> shows how much size is waiting to buy below the current price; the <b>red area (asks)</b> shows how much is waiting to sell above it. A tall, steep wall close to the middle means it would take a large market order to move price past that level — a thin, gently sloping side means price could move through it easily. Lopsided depth (one side much taller) can hint at which direction has more resting support right now, but it changes second by second as orders are placed and pulled.',
+    depthInfo:'Think of it like a waiting line at a shop. The <b>green side</b> shows how many people are lined up ready to buy if the price drops a little. The <b>red side</b> shows how many are ready to sell if it rises a little. A tall wall means a lot of people are waiting right there, so the price has a harder time pushing through it. This changes constantly as people join or leave the line.',
     weightsHint:'Default weighting across fourteen indicators, tuned per style. Drag to match your own approach.',
     weightsTotal:'Total', weightsNormalized:'(normalized)',
     footer:'Data: CoinGecko, Kraken, Hyperliquid, Alternative.me. Not financial advice.',
@@ -442,13 +442,13 @@ const I18N = {
     setup:{
       heading:'Setup levels', longRef:'Long-side reference', shortRef:'Short-side reference', noSetup:'No directional setup — zone is neutral.',
       entry:'Entry zone', invalidation:'Invalidation', target1:'Target 1', target2:'Target 2', rr:'Reference R:R',
-      disclaimer:'Mechanically derived from Fibonacci structure around the current price. Not a trade recommendation — position sizing and risk are your decision.',
+      disclaimer:'Worked out automatically from the price chart. Not a recommendation to trade — how much to risk is always your call.',
     },
     divergence:{
       badgeBull:'Bullish divergence', badgeBear:'Bearish divergence',
       noteBull:'Price is making new lows while RSI is not — momentum may be fading.',
       noteBear:'Price is making new highs while RSI is not — the rally may be losing steam.',
-      tooltip:'Price and RSI are moving in opposite directions — a classic early warning that the current trend may be running out of momentum.',
+      tooltip:'The price and the speedometer (RSI) are disagreeing right now — an early hint the current move might be running out of steam.',
     },
     dataUnavailable:'Live update failed — showing last known data.',
     globalBanner:"No live data could be loaded. If you're seeing this inside a preview pane, open the downloaded file directly in your browser instead.",
@@ -456,32 +456,32 @@ const I18N = {
     pulse:{ heading:'Perp pulse', source:'via Hyperliquid', shortsPay:'shorts paid', longsPay:'longs pay', openInterest:'Open interest',
       flowBuildBull:'Bullish build-up', flowBuildBear:'Bearish build-up', flowSqueeze:'Short squeeze', flowUnwind:'Long unwind', flowStable:'Stable', flowUnknown:'—',
       unavailable:'Derivatives data unavailable.',
-      fundingTooltip:'Colored the same contrarian way as the rest of the dashboard: red means longs are crowded and paying a premium (often overheated), green means shorts are crowded (often a contrarian bounce setup) — not a live bullish/bearish mood reading.' },
-    binancePulse:{ heading:'Binance Top Trader Pulse', source:'via Binance Futures', tooltip:'Top 20% of Binance futures traders by margin balance — often called "smart money".',
+      fundingTooltip:"This color isn't 'good news vs bad news'. It just shows which side — up-bets or down-bets — has gotten too crowded. Crowded bets often flip soon." },
+    binancePulse:{ heading:'Binance Top Trader Pulse', source:'via Binance Futures', tooltip:'The biggest, most experienced traders on one major exchange — sometimes nicknamed \'smart money\'.',
       shortSide:'short', longSide:'long', positionRatio:'Pos', accountRatio:'Acct', trend24h:'24h trend',
       biasBullish:'Bullish bias', biasBearish:'Bearish bias', biasNeutral:'Neutral',
       notAvailable:'Not available on Binance for this asset.', unavailable:'Binance data unavailable right now.' },
     factors:{
-      rsi:{ label:'RSI', full:'RSI (Relative Strength)', explain:'Measures the speed and size of recent price moves on a 0–100 scale. Below 30 suggests oversold, above 70 overbought.' },
-      ema:{ label:'Trend (EMA)', full:'Trend / EMA Cross', explain:'Compares a fast and slow moving average. Fast above slow reads bullish, below reads bearish.' },
-      macd:{ label:'MACD', full:'MACD', explain:'The gap between two EMAs vs its own signal line. A cross above signal marks momentum turning positive.' },
-      bb:{ label:'Bollinger %B', full:'Bollinger Bands (%B)', explain:'Price position within a volatility band. Low %B means near the lower band, statistically stretched down.' },
-      obv:{ label:'OBV', full:'OBV (Volume Trend)', explain:'Cumulative volume weighted by price direction. Price down while OBV rises is a bullish divergence.' },
-      vwap:{ label:'VWAP', full:'VWAP', explain:'Volume-weighted average price for the session. Price below VWAP is, all else equal, a discount.' },
-      atr:{ label:'ATR', full:'ATR (Volatility Filter)', explain:'Typical price range per period. Used as a volatility filter and to size a reference stop distance.' },
-      fib:{ label:'Fibonacci', full:'Fibonacci Retracement', explain:'Price pullback ratios after a swing high/low. The 38–62% zone is a classic support pocket.' },
-      ath:{ label:'ATH distance', full:'Distance from ATH', explain:'How far price sits below its all-time high — mainly relevant for long-term investors.' },
-      fgi:{ label:'Fear & Greed', full:'Fear & Greed Index', explain:'Composite market sentiment score. Extreme fear has historically coincided with attractive entries.' },
-      mom:{ label:'Momentum', full:'Momentum', explain:'Percentage price change over a style-matched lookback window.' },
-      binance:{ label:'Binance Top Trader', full:'Binance Top Trader Long/Short Ratio', explain:"How the top 20% of Binance futures traders by margin balance — often called 'smart money' — are positioned right now, contrarian-scored: crowded longs score low (expensive/risky), crowded shorts score high (potential contrarian bounce)." },
-      cvd:{ label:'CVD', full:'Cumulative Volume Delta', explain:"Adds up real aggressive buy volume minus sell volume over time, from actual trade data — a sharper version of OBV. If price falls while CVD keeps climbing, buyers are quietly absorbing the drop (bullish divergence). BTC, ETH and SOL only." },
-      basis:{ label:'Futures Basis', full:'Futures Basis (Perp vs. Spot)', explain:'How far the Hyperliquid perpetual price sits above or below the blended spot price. A rich premium means leveraged longs are paying up to chase price — often overheated. A discount reads the opposite way, contrarian-scored just like funding rate.' },
+      rsi:{ label:'RSI', full:'RSI (Relative Strength)', explain:"Shows if the price has been jumping up or down really fast lately — like a speedometer. Very low means it dropped fast and might bounce back; very high means it rose fast and might cool off." },
+      ema:{ label:'Trend (EMA)', full:'Trend / EMA Cross', explain:"Compares a short-term average price with a longer-term one — like checking if this week feels warmer than the whole month's average. Short-term above long-term usually means the trend points up." },
+      macd:{ label:'MACD', full:'MACD', explain:"A trend-strength tool built from two of the moving averages above. When it flips from falling to rising, that's often read as the trend starting to turn upward." },
+      bb:{ label:'Bollinger %B', full:'Bollinger Bands (%B)', explain:"Draws a stretchy band around the price based on how wild it's been swinging lately. Price near the bottom of that band usually means it's been pushed unusually low." },
+      obv:{ label:'OBV', full:'OBV (Volume Trend)', explain:"Keeps a running tally of trading volume — adding when price rises, subtracting when it falls. If price drops but this keeps climbing, quiet buyers may be stepping in underneath." },
+      vwap:{ label:'VWAP', full:'VWAP', explain:"The average price everyone actually paid today, weighted by how much they traded. Current price below this line is, roughly speaking, a discount versus today's typical trade." },
+      atr:{ label:'ATR', full:'ATR (Volatility Filter)', explain:"Measures how big the price swings typically are right now, in real dollars — not a direction signal, just a 'how wild is it' gauge, used to suggest a sensible stop-loss distance." },
+      fib:{ label:'Fibonacci', full:'Fibonacci Retracement', explain:"After a big move up or down, price often pauses at a few specific spots on the way back — like natural resting steps on a staircase. This shows how close price is to one of those steps." },
+      ath:{ label:'ATH distance', full:'Distance from ATH', explain:"How far today's price is below the highest price this coin has ever reached — simple math, no trick to it." },
+      fgi:{ label:'Fear & Greed', full:'Fear & Greed Index', explain:"A daily mood-check for the whole crypto market, built from several sources — is everyone scared right now, or is everyone greedy?" },
+      mom:{ label:'Momentum', full:'Momentum', explain:'Simply: how much the price has changed over a recent stretch of time, in percent.' },
+      binance:{ label:'Binance Top Trader', full:'Binance Top Trader Long/Short Ratio', explain:"Looks at what the biggest, most experienced traders on a major exchange are betting on right now — but reads it backwards on purpose: if almost everyone bets the same way, that's read as a warning, not encouragement, because crowded bets tend to flip." },
+      cvd:{ label:'CVD', full:'Cumulative Volume Delta', explain:"A more precise version of the volume-counter above, built from real buy-by-buy and sell-by-sell trade data instead of whole time chunks. BTC, ETH and SOL only." },
+      basis:{ label:'Futures Basis', full:'Futures Basis (Perp vs. Spot)', explain:"Compares the price on a leveraged-trading platform to the regular price everywhere else. When the leveraged price runs noticeably higher, people are paying extra to bet on more gains — sometimes a sign things got a bit too excited." },
     },
     secondary:{
       heading:'Secondary — derivatives', intro:"Live from Hyperliquid's own perp order book. Shown as context, not blended into the score.",
-      funding:{ label:'Funding rate', explain:'Payment exchanged between long and short perpetual holders, annualized. Strongly positive means crowded longs; strongly negative has historically coincided with contrarian bounces.' },
-      oi:{ label:'Open interest', explain:'Total notional value of outstanding perp contracts. Rising OI means fresh leverage entering; falling OI means positions closing.' },
-      flow:{ label:'Positioning flow', explain:'Combines price direction with OI direction to classify what leveraged traders are doing: building, squeezing, or unwinding.' },
+      funding:{ label:'Funding rate', explain:"A small fee that up-bet traders and down-bet traders keep paying each other. When it's unusually high, a lot of people are betting up and paying extra for it — often a warning sign, not a good one." },
+      oi:{ label:'Open interest', explain:"The total amount of money currently tied up in these leveraged bets. Going up means more people are jumping in; going down means people are cashing out." },
+      flow:{ label:'Positioning flow', explain:'Combines the last two things into one simple read: are leveraged traders piling in right now, or backing out?' },
     },
     shortcuts:'Keyboard: 1/2/3 switch style · M opens this guide · C copies a snapshot · Esc closes',
   },
@@ -495,7 +495,7 @@ const I18N = {
     blockStyle:'Trading-Stil', blockDepth:'Orderbuch-Tiefe', blockCorr:'Korrelation', blockMatrix:'Alle Assets vergleichen', blockSignals:'Live-Signale', blockWeights:'Gewichtung',
     depthInfoBtn:'Was bedeutet das?',
     guideLink:'Anleitung',
-    depthInfo:'Jeder Punkt auf der Preisachse ist eine offene Limit-Order auf Hyperliquid, kumuliert vom Mittelpreis nach außen. Die <b>grüne Fläche (Bids)</b> zeigt, wie viel Volumen unterhalb des aktuellen Preises zum Kauf bereitsteht; die <b>rote Fläche (Asks)</b> zeigt, wie viel oberhalb zum Verkauf bereitsteht. Eine hohe, steile Wand nahe der Mitte bedeutet, dass eine große Market-Order nötig wäre, um den Preis über dieses Level zu bewegen — eine dünne, flach ansteigende Seite bedeutet, der Preis könnte leicht hindurchlaufen. Eine schiefe Verteilung (eine Seite deutlich höher) kann andeuten, wo gerade mehr Unterstützung liegt, ändert sich aber sekündlich, da Orders laufend platziert und zurückgezogen werden.',
+    depthInfo:'Stell es dir wie eine Warteschlange vor einem Laden vor. Die <b>grüne Seite</b> zeigt, wie viele bereitstehen zu kaufen, falls der Kurs etwas fällt. Die <b>rote Seite</b> zeigt, wie viele bereitstehen zu verkaufen, falls er etwas steigt. Eine hohe Wand bedeutet, dort warten viele — der Kurs kommt schwerer durch. Das ändert sich ständig, weil Leute sich ein- und ausreihen.',
     weightsHint:'Standardgewichtung über vierzehn Indikatoren, je Stil abgestimmt. Regler verschieben, um es an deine Strategie anzupassen.',
     weightsTotal:'Summe', weightsNormalized:'(normalisiert)',
     footer:'Daten: CoinGecko, Kraken, Hyperliquid, Alternative.me. Keine Anlageberatung.',
@@ -515,13 +515,13 @@ const I18N = {
     setup:{
       heading:'Setup-Level', longRef:'Long-Referenz', shortRef:'Short-Referenz', noSetup:'Keine richtungsklare Struktur — Zone ist neutral.',
       entry:'Einstiegszone', invalidation:'Invalidierung', target1:'Ziel 1', target2:'Ziel 2', rr:'Referenz-CRV',
-      disclaimer:'Mechanisch aus der Fibonacci-Struktur um den aktuellen Preis abgeleitet. Keine Handelsempfehlung — Positionsgröße und Risiko sind deine Entscheidung.',
+      disclaimer:'Automatisch aus dem Kurschart abgeleitet. Keine Handelsempfehlung — wie viel du riskierst, entscheidest immer du.',
     },
     divergence:{
       badgeBull:'Bullische Divergenz', badgeBear:'Bärische Divergenz',
       noteBull:'Der Kurs macht neue Tiefs, der RSI aber nicht — das Momentum lässt möglicherweise nach.',
       noteBear:'Der Kurs macht neue Hochs, der RSI aber nicht — der Rally könnte die Luft ausgehen.',
-      tooltip:'Kurs und RSI bewegen sich in entgegengesetzte Richtungen — ein klassisches Frühwarnsignal, dass dem aktuellen Trend die Kraft ausgehen könnte.',
+      tooltip:'Kurs und Tacho (RSI) widersprechen sich gerade — ein früher Hinweis, dass der aktuellen Bewegung die Kraft ausgehen könnte.',
     },
     dataUnavailable:'Live-Update fehlgeschlagen — zeigt letzte bekannte Daten.',
     globalBanner:'Es konnten keine Live-Daten geladen werden. Falls du das in einer Vorschau siehst, öffne die Datei direkt im Browser.',
@@ -529,32 +529,32 @@ const I18N = {
     pulse:{ heading:'Perp Pulse', source:'via Hyperliquid', shortsPay:'Shorts zahlten', longsPay:'Longs zahlen', openInterest:'Open Interest',
       flowBuildBull:'Bullischer Aufbau', flowBuildBear:'Bärischer Aufbau', flowSqueeze:'Short Squeeze', flowUnwind:'Long-Auflösung', flowStable:'Stabil', flowUnknown:'—',
       unavailable:'Derivate-Daten nicht verfügbar.',
-      fundingTooltip:'Genauso kontrarisch eingefärbt wie der Rest des Dashboards: Rot bedeutet, Longs sind überfüllt und zahlen eine Prämie (oft überhitzt), Grün bedeutet, Shorts sind überfüllt (oft ein gegenläufiges Erholungs-Setup) — keine Live-Stimmungsanzeige.' },
-    binancePulse:{ heading:'Binance Top Trader Pulse', source:'via Binance Futures', tooltip:'Die obersten 20% der Binance-Futures-Trader nach Margin-Guthaben — oft "Smart Money" genannt.',
+      fundingTooltip:"Diese Farbe bedeutet nicht 'gute vs. schlechte Nachricht'. Sie zeigt nur, welche Seite — Aufwärts- oder Abwärtswetten — gerade überfüllt ist. Überfüllte Wetten kippen oft bald." },
+    binancePulse:{ heading:'Binance Top Trader Pulse', source:'via Binance Futures', tooltip:'Die größten, erfahrensten Trader an einer großen Börse — manchmal \'Smart Money\' genannt.',
       shortSide:'Short', longSide:'Long', positionRatio:'Pos', accountRatio:'Konto', trend24h:'24-Std-Trend',
       biasBullish:'Bullischer Bias', biasBearish:'Bärischer Bias', biasNeutral:'Neutral',
       notAvailable:'Für dieses Asset nicht bei Binance verfügbar.', unavailable:'Binance-Daten derzeit nicht verfügbar.' },
     factors:{
-      rsi:{ label:'RSI', full:'RSI (Relative Stärke)', explain:'Misst Tempo und Ausmaß jüngster Kursbewegungen (0–100). Unter 30 = überverkauft, über 70 = überkauft.' },
-      ema:{ label:'Trend (EMA)', full:'Trend / EMA-Kreuzung', explain:'Vergleicht schnellen mit langsamem Durchschnitt. Schnell über langsam = bullisch, darunter = bärisch.' },
-      macd:{ label:'MACD', full:'MACD', explain:'Abstand zweier EMAs zur eigenen Signallinie. Kreuzung über Signal markiert einsetzendes Momentum.' },
-      bb:{ label:'Bollinger %B', full:'Bollinger Bands (%B)', explain:'Kursposition innerhalb eines Volatilitätsbands. Niedriges %B = nahe unterem Band, überdehnt nach unten.' },
-      obv:{ label:'OBV', full:'OBV (Volumen-Trend)', explain:'Kumuliertes, richtungsgewichtetes Volumen. Kurs fällt, OBV steigt = bullische Divergenz.' },
-      vwap:{ label:'VWAP', full:'VWAP', explain:'Volumengewichteter Durchschnittspreis der Sitzung. Kurs darunter ist, alles andere gleich, ein Abschlag.' },
-      atr:{ label:'ATR', full:'ATR (Volatilitäts-Filter)', explain:'Typische Preisspanne je Periode. Dient als Volatilitätsfilter und für einen Referenz-Stop-Abstand.' },
-      fib:{ label:'Fibonacci', full:'Fibonacci-Retracement', explain:'Rückzugs-Verhältnisse nach Hoch/Tief. Die 38–62%-Zone gilt als klassischer Unterstützungsbereich.' },
-      ath:{ label:'ATH-Abstand', full:'Abstand zum Allzeithoch', explain:'Wie weit der Kurs unter seinem Allzeithoch liegt — vor allem für langfristige Investoren relevant.' },
-      fgi:{ label:'Fear & Greed', full:'Fear & Greed Index', explain:'Zusammengesetzter Sentiment-Score. Extreme Angst fiel historisch oft mit attraktiven Einstiegen zusammen.' },
-      mom:{ label:'Momentum', full:'Momentum', explain:'Prozentuale Kursänderung über ein stilabhängiges Zeitfenster.' },
-      binance:{ label:'Binance Top Trader', full:'Binance Top Trader Long/Short Ratio', explain:'Wie die obersten 20% der Binance-Futures-Trader nach Margin-Guthaben — oft "Smart Money" genannt — gerade positioniert sind, gegenläufig bewertet: überfüllte Longs bekommen einen niedrigen Score (teuer/riskant), überfüllte Shorts einen hohen Score (mögliche gegenläufige Erholung).' },
-      cvd:{ label:'CVD', full:'Cumulative Volume Delta', explain:'Summiert echtes aggressives Kauf- minus Verkaufsvolumen über Zeit, aus echten Trade-Daten — eine schärfere Version von OBV. Fällt der Kurs, während CVD weiter steigt, absorbieren Käufer still den Rückgang (bullische Divergenz). Nur BTC, ETH und SOL.' },
-      basis:{ label:'Futures Basis', full:'Futures Basis (Perp vs. Spot)', explain:'Wie weit der Hyperliquid-Perp-Preis über oder unter dem gemischten Spot-Preis liegt. Eine üppige Prämie bedeutet, gehebelte Longs zahlen drauf, um dem Preis hinterherzujagen — oft überhitzt. Ein Abschlag liest sich umgekehrt, gegenläufig bewertet wie die Funding Rate.' },
+      rsi:{ label:'RSI', full:'RSI (Relative Stärke)', explain:'Zeigt, ob der Kurs zuletzt sehr schnell rauf oder runter ist — wie ein Tacho. Sehr niedrig heißt: stark gefallen, könnte sich erholen. Sehr hoch heißt: stark gestiegen, könnte abkühlen.' },
+      ema:{ label:'Trend (EMA)', full:'Trend / EMA-Kreuzung', explain:'Vergleicht einen kurzfristigen Durchschnittspreis mit einem langfristigen — wie beim Wetter: ist diese Woche wärmer als der Monatsschnitt? Ist kurzfristig über langfristig, zeigt der Trend nach oben.' },
+      macd:{ label:'MACD', full:'MACD', explain:'Ein Trendstärke-Werkzeug aus zwei der oben genannten Durchschnittswerte. Dreht es von fallend auf steigend, wird das oft als beginnender Aufwärtstrend gelesen.' },
+      bb:{ label:'Bollinger %B', full:'Bollinger Bands (%B)', explain:'Zieht ein gummiband-artiges Band um den Kurs, je nachdem wie stark er zuletzt geschwankt ist. Nahe am unteren Rand heißt oft: ungewöhnlich weit unten gedehnt.' },
+      obv:{ label:'OBV', full:'OBV (Volumen-Trend)', explain:'Zählt das Handelsvolumen laufend zusammen — addiert bei steigendem, subtrahiert bei fallendem Kurs. Fällt der Kurs, steigt das hier aber weiter, könnten still Käufer einsteigen.' },
+      vwap:{ label:'VWAP', full:'VWAP', explain:'Der Durchschnittspreis, den heute tatsächlich alle gezahlt haben, gewichtet nach Handelsmenge. Liegt der aktuelle Kurs darunter, ist das grob gesagt ein Rabatt.' },
+      atr:{ label:'ATR', full:'ATR (Volatilitäts-Filter)', explain:"Misst, wie groß die Kursschwankungen gerade typischerweise sind, in echten Dollar — kein Richtungssignal, nur ein 'wie wild ist es'-Messwert, genutzt für einen sinnvollen Stop-Loss-Abstand." },
+      fib:{ label:'Fibonacci', full:'Fibonacci-Retracement', explain:'Nach einer großen Bewegung nach oben oder unten macht der Kurs beim Rückzug oft an ein paar bestimmten Stufen halt — wie natürliche Ruhepunkte auf einer Treppe. Das zeigt, wie nah der Kurs an so einer Stufe ist.' },
+      ath:{ label:'ATH-Abstand', full:'Abstand zum Allzeithoch', explain:'Wie weit der heutige Kurs unter dem höchsten Preis liegt, den diese Coin je erreicht hat — einfache Rechnung, kein Trick dabei.' },
+      fgi:{ label:'Fear & Greed', full:'Fear & Greed Index', explain:'Ein täglicher Stimmungs-Check für den ganzen Kryptomarkt aus mehreren Quellen — sind gerade alle ängstlich oder alle gierig?' },
+      mom:{ label:'Momentum', full:'Momentum', explain:'Ganz einfach: wie viel Prozent sich der Kurs über einen letzten Zeitraum verändert hat.' },
+      binance:{ label:'Binance Top Trader', full:'Binance Top Trader Long/Short Ratio', explain:'Schaut, worauf die größten, erfahrensten Trader an einer großen Börse gerade wetten — liest das aber absichtlich umgekehrt: wetten fast alle gleich, gilt das als Warnung statt Ermutigung, weil überfüllte Wetten oft kippen.' },
+      cvd:{ label:'CVD', full:'Cumulative Volume Delta', explain:'Eine genauere Version des Volumen-Zählers von oben, gebaut aus echten Kauf-für-Kauf-Daten statt ganzen Zeitabschnitten. Nur BTC, ETH und SOL.' },
+      basis:{ label:'Futures Basis', full:'Futures Basis (Perp vs. Spot)', explain:'Vergleicht den Preis auf einer Hebel-Handelsplattform mit dem normalen Preis überall sonst. Läuft der Hebel-Preis deutlich höher, zahlen Leute drauf, um auf weitere Gewinne zu wetten — manchmal ein Zeichen von zu viel Euphorie.' },
     },
     secondary:{
       heading:'Sekundär — Derivate', intro:'Live aus Hyperliquids eigenem Perp-Orderbuch. Als Kontext gezeigt, nicht in den Score eingerechnet.',
-      funding:{ label:'Funding Rate', explain:'Zahlung zwischen Long- und Short-Haltern, annualisiert. Stark positiv = überfüllte Longs; stark negativ fiel historisch oft mit Erholungen zusammen.' },
-      oi:{ label:'Open Interest', explain:'Gesamtwert offener Perp-Kontrakte. Steigend = frisches Kapital; fallend = Positionen werden geschlossen.' },
-      flow:{ label:'Positioning Flow', explain:'Kombiniert Kurs- und OI-Richtung, um Trader-Verhalten einzuordnen: Aufbau, Squeeze oder Auflösung.' },
+      funding:{ label:'Funding Rate', explain:'Eine kleine Gebühr, die Aufwärts-Wetter und Abwärts-Wetter sich laufend gegenseitig zahlen. Ist sie ungewöhnlich hoch, wetten viele auf steigend und zahlen dafür drauf — eher ein Warnsignal.' },
+      oi:{ label:'Open Interest', explain:'Die gesamte Geldmenge, die gerade in diesen Hebel-Wetten steckt. Steigt sie, springen mehr Leute ein; fällt sie, steigen Leute aus.' },
+      flow:{ label:'Positioning Flow', explain:'Fasst die letzten beiden Dinge in einer einfachen Aussage zusammen: steigen gehebelte Trader gerade ein oder aus?' },
     },
     shortcuts:'Tastatur: 1/2/3 wechselt Stil · M öffnet diesen Leitfaden · C kopiert Snapshot · Esc schließt',
   },
@@ -967,7 +967,7 @@ async function fetchStyleData(styleKey){
       if(!styleData[styleKey][a.id]) styleData[styleKey][a.id] = { _error:true };
       else styleData[styleKey][a.id]._error = true;
     }
-    await new Promise(r=>setTimeout(r, 300));
+    await new Promise(r=>setTimeout(r, 200)); // staggered to be considerate to CoinGecko's rate limit
   }
 }
 
@@ -1098,8 +1098,11 @@ async function fetchCVD(assetId, force){
 // isn't stuck waiting through two full stagger passes back to back.
 async function fetchAllBinanceData(force){
   for(const a of ASSETS){
+    const before = Date.now();
     await Promise.all([ fetchBinanceTopTrader(a.id, force), fetchCVD(a.id, force) ]);
-    await new Promise(r=>setTimeout(r, 250)); // stagger between assets to be a considerate neighbor to the API
+    // Skip the stagger entirely when both calls just returned from the 5-minute cache
+    // (near-instant) — only real network round-trips need spacing out.
+    if(Date.now()-before > 50) await new Promise(r=>setTimeout(r, 250));
   }
 }
 
@@ -1485,7 +1488,7 @@ function renderBinancePulse(assetId){
     <div class="funding-row">
       <div class="funding-labels"><span>${L.binancePulse.shortSide}</span><span>${L.binancePulse.longSide}</span></div>
       <div class="ls-split-track"><div class="ls-split-short" style="width:${bd.shortPct.toFixed(1)}%"></div><div class="ls-split-long" style="width:${bd.longPct.toFixed(1)}%"></div></div>
-      <div class="funding-val mono">${bd.longPct.toFixed(0)}% / ${bd.shortPct.toFixed(0)}% <span class="ls-ratio">(${L.binancePulse.positionRatio} ${bd.positionRatio.toFixed(2)} · ${L.binancePulse.accountRatio} ${bd.accountRatio.toFixed(2)})</span></div>
+      <div class="funding-val mono">${L.binancePulse.shortSide} ${bd.shortPct.toFixed(0)}% / ${L.binancePulse.longSide} ${bd.longPct.toFixed(0)}% <span class="ls-ratio">(${L.binancePulse.positionRatio} ${bd.positionRatio.toFixed(2)} · ${L.binancePulse.accountRatio} ${bd.accountRatio.toFixed(2)})</span></div>
     </div>
     <div class="pulse-stats">
       <div class="binance-spark-wrap">${binanceSparklineSvg(bd.history, biasHex)}<div class="oi-label">${L.binancePulse.trend24h}</div></div>
@@ -1856,10 +1859,16 @@ buildDepthTabs();
 // ---------- refresh loop ----------
 async function refreshAll(){
   try{
-    await fetchMarketsAndFGI();
-    await fetchStyleData(currentStyle);
-    await fetchAllBinanceData(); // Top Trader + CVD together, per asset — internally cached (5 min)
-    await fetchDerivatives(); // moved ahead of recomputeAllScores — the Basis factor needs markPx already in hand
+    // The three providers (CoinGecko/Kraken, Binance, Hyperliquid) don't share a rate limit
+    // with each other, so there's no need to wait for one to finish before starting the next.
+    // Calls WITHIN a single provider's chain stay sequential/staggered (see fetchStyleData,
+    // fetchAllBinanceData) so we don't burst any one host too hard — only the three chains
+    // themselves now run side by side instead of back to back.
+    await Promise.all([
+      fetchMarketsAndFGI().then(()=> fetchStyleData(currentStyle)),
+      fetchAllBinanceData(),
+      fetchDerivatives(), // the Basis factor needs markPx already in hand before recomputeAllScores
+    ]);
     recomputeAllScores(true);
     renderAllDerivatives(); // updates the separate Perp Pulse UI block
     lastStatus = Object.keys(market).length>0 ? 'live' : 'error';
