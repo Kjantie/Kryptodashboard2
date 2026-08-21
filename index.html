@@ -2051,26 +2051,37 @@ function drawLiquidationDensity(points, currentPrice, canvas, statsEl, axisEl, L
   const maxD = Math.max(...density) || 1;
   const bucketH = h/BUCKETS;
   const HOT_THRESHOLD = 0.7; // buckets at or above 70% of the peak density get an explicit outline
+  // Bar WIDTH now carries the actual "how much" — color intensity alone made every row look
+  // roughly the same mass with just a slightly different tint, which read as "no volume visible".
+  // A thin sliver floor keeps near-empty rows faintly present rather than invisible.
+  const MIN_BAR_FRAC = 0.06;
   for(let i=0;i<BUCKETS;i++){
     const intensity = density[i]/maxD;
+    const barW = w * (MIN_BAR_FRAC + intensity*(1-MIN_BAR_FRAC));
     ctx.fillStyle = heatScaleColor(intensity);
-    ctx.globalAlpha = 0.15 + intensity*0.75;
+    ctx.globalAlpha = 0.35 + intensity*0.6;
     // price axis runs bottom(low)->top(high); bucket 0 = minPx
-    ctx.fillRect(0, h-(i+1)*bucketH, w, bucketH+0.5);
+    ctx.fillRect(0, h-(i+1)*bucketH, barW, bucketH+0.5);
   }
   ctx.globalAlpha = 1;
   // A second pass draws a bright outline around every hot band as one continuous shape (rather
   // than framing each bucket separately, which would look like a row of boxes) so the densest
   // price range reads as a single clearly-marked zone, not just "somewhat brighter than nearby rows".
-  let hotStart = null;
+  // Uses the WIDEST bar within the zone so the outline always fully encloses every bar in that
+  // span, even though individual rows within the same "hot" band can still differ slightly in width.
+  let hotStart = null, hotMaxW = 0;
   for(let i=0;i<=BUCKETS;i++){
     const isHot = i<BUCKETS && (density[i]/maxD) >= HOT_THRESHOLD;
-    if(isHot && hotStart===null) hotStart = i;
+    if(isHot){
+      if(hotStart===null) hotStart = i;
+      const barW = w * (MIN_BAR_FRAC + (density[i]/maxD)*(1-MIN_BAR_FRAC));
+      hotMaxW = Math.max(hotMaxW, barW);
+    }
     if((!isHot || i===BUCKETS) && hotStart!==null){
       const yTop = h-i*bucketH, yBot = h-hotStart*bucketH;
       ctx.strokeStyle = '#FFD23C'; ctx.lineWidth = 1.5;
-      ctx.strokeRect(1, yTop, w-2, yBot-yTop);
-      hotStart = null;
+      ctx.strokeRect(1, yTop, hotMaxW-2, yBot-yTop);
+      hotStart = null; hotMaxW = 0;
     }
   }
 
