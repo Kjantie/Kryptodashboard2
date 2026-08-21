@@ -186,7 +186,7 @@
   .pulse-body{ display:grid; grid-template-columns:1fr; gap:9px; }
   @container assetcard (min-width:420px){ .pulse-body{ grid-template-columns:1.3fr 1fr; align-items:center; } }
   .funding-labels{ display:flex; justify-content:space-between; color:var(--muted); font-size:9px; margin-bottom:4px; }
-  .funding-track{ position:relative; height:5px; border-radius:3px; background:linear-gradient(90deg,var(--emerald),rgba(255,255,255,0.06) 48%,rgba(255,255,255,0.06) 52%,var(--red)); }
+  .funding-track{ position:relative; height:5px; border-radius:3px; background:linear-gradient(90deg,var(--emerald),rgba(255,255,255,0.06) 48%,rgba(255,255,255,0.06) 52%,var(--red)); cursor:help; }
   .funding-marker{ position:absolute; top:50%; width:9px; height:9px; border-radius:50%; background:#fff; box-shadow:0 0 8px rgba(255,255,255,.6); transform:translate(-50%,-50%); transition:left .8s ease; }
   .funding-val{ margin-top:4px; font-family:'IBM Plex Mono',monospace; font-size:11px; }
   .pulse-stats{ display:flex; justify-content:space-between; align-items:flex-end; gap:8px; }
@@ -451,7 +451,8 @@ const I18N = {
     expandMore:'Show full breakdown', expandLess:'Hide breakdown',
     pulse:{ heading:'Perp pulse', source:'via Hyperliquid', shortsPay:'shorts paid', longsPay:'longs pay', openInterest:'Open interest',
       flowBuildBull:'Bullish build-up', flowBuildBear:'Bearish build-up', flowSqueeze:'Short squeeze', flowUnwind:'Long unwind', flowStable:'Stable', flowUnknown:'—',
-      unavailable:'Derivatives data unavailable.' },
+      unavailable:'Derivatives data unavailable.',
+      fundingTooltip:'Colored the same contrarian way as the rest of the dashboard: red means longs are crowded and paying a premium (often overheated), green means shorts are crowded (often a contrarian bounce setup) — not a live bullish/bearish mood reading.' },
     binancePulse:{ heading:'Binance Top Trader Pulse', source:'via Binance Futures', tooltip:'Top 20% of Binance futures traders by margin balance — often called "smart money".',
       shortSide:'short', longSide:'long', positionRatio:'Pos', accountRatio:'Acct', trend24h:'24h trend',
       biasBullish:'Bullish bias', biasBearish:'Bearish bias', biasNeutral:'Neutral',
@@ -523,7 +524,8 @@ const I18N = {
     expandMore:'Vollständige Aufschlüsselung zeigen', expandLess:'Aufschlüsselung ausblenden',
     pulse:{ heading:'Perp Pulse', source:'via Hyperliquid', shortsPay:'Shorts zahlten', longsPay:'Longs zahlen', openInterest:'Open Interest',
       flowBuildBull:'Bullischer Aufbau', flowBuildBear:'Bärischer Aufbau', flowSqueeze:'Short Squeeze', flowUnwind:'Long-Auflösung', flowStable:'Stabil', flowUnknown:'—',
-      unavailable:'Derivate-Daten nicht verfügbar.' },
+      unavailable:'Derivate-Daten nicht verfügbar.',
+      fundingTooltip:'Genauso kontrarisch eingefärbt wie der Rest des Dashboards: Rot bedeutet, Longs sind überfüllt und zahlen eine Prämie (oft überhitzt), Grün bedeutet, Shorts sind überfüllt (oft ein gegenläufiges Erholungs-Setup) — keine Live-Stimmungsanzeige.' },
     binancePulse:{ heading:'Binance Top Trader Pulse', source:'via Binance Futures', tooltip:'Die obersten 20% der Binance-Futures-Trader nach Margin-Guthaben — oft "Smart Money" genannt.',
       shortSide:'Short', longSide:'Long', positionRatio:'Pos', accountRatio:'Konto', trend24h:'24-Std-Trend',
       biasBullish:'Bullischer Bias', biasBearish:'Bärischer Bias', biasNeutral:'Neutral',
@@ -1414,7 +1416,7 @@ function renderDerivatives(assetId){
   bodyEl.innerHTML = `
     <div class="funding-row">
       <div class="funding-labels"><span>${L.pulse.shortsPay}</span><span>${L.pulse.longsPay}</span></div>
-      <div class="funding-track"><div class="funding-marker" style="left:${markerPct}%"></div></div>
+      <div class="funding-track" title="${L.pulse.fundingTooltip}"><div class="funding-marker" style="left:${markerPct}%"></div></div>
       <div class="funding-val mono">${d.fundingAprPct>=0?'+':''}${d.fundingAprPct.toFixed(1)}% APR</div>
     </div>
     <div class="pulse-stats">
