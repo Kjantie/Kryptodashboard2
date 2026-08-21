@@ -59,11 +59,28 @@
   /* ---------- USP strip ---------- */
   .usp-strip{ display:flex; flex-direction:column; gap:12px; padding:14px 16px; border-bottom:1px solid var(--line-soft); }
   .usp-item{ display:flex; align-items:center; gap:12px; }
-  .usp-wave{ width:52px; height:22px; flex:0 0 auto; overflow:hidden; }
-  .usp-wave svg{ width:200%; height:100%; animation:waveScroll 5s linear infinite; }
+  .usp-mini-gauge{ width:44px; height:44px; flex:0 0 auto; }
+  .usp-mini-gauge svg{ width:100%; height:100%; }
+  .usp-gauge-ring{
+    stroke-dasharray: 213.6;
+    filter: drop-shadow(0 0 6px rgba(255,255,255,0.4));
+    animation: uspGaugeDemo 4s ease-in-out infinite;
+  }
+  @keyframes uspGaugeDemo{
+    0%, 100% { stroke-dashoffset: 192; stroke: var(--red); }
+    35% { stroke-dashoffset: 107; stroke: var(--cyan); }
+    70% { stroke-dashoffset: 21; stroke: var(--emerald); }
+  }
   @keyframes waveScroll{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
-  .usp-heartbeat{ width:52px; height:22px; flex:0 0 auto; overflow:hidden; }
-  .usp-heartbeat svg{ width:200%; height:100%; animation:hbScroll 3.2s linear infinite; }
+  .usp-heartbeat{ width:68px; height:36px; flex:0 0 auto; overflow:hidden; filter:drop-shadow(0 0 7px rgba(63,232,224,0.6)); animation:heartbeatThump 1.8s ease-in-out infinite; }
+  .usp-heartbeat svg{ width:200%; height:100%; animation:hbScroll 2.4s linear infinite; }
+  @keyframes heartbeatThump{
+    0%, 100% { transform:scale(1); }
+    8% { transform:scale(1.12); }
+    16% { transform:scale(1); }
+    24% { transform:scale(1.12); }
+    32% { transform:scale(1); }
+  }
   @keyframes hbScroll{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
   .usp-text b{ font-family:'Space Grotesk',sans-serif; font-size:12.5px; letter-spacing:0.4px; }
   .usp-text p{ margin:2px 0 0; font-size:11.5px; color:var(--muted); line-height:1.4; max-width:320px; }
@@ -179,7 +196,7 @@
   /* ---------- perp pulse ---------- */
   .perp-pulse{ margin-top:6px; padding-top:12px; border-top:1px dashed var(--line); }
   .pulse-head{ display:flex; align-items:center; gap:8px; margin-bottom:9px; }
-  .pulse-hb{ width:38px; height:16px; overflow:hidden; flex:0 0 auto; }
+  .pulse-hb{ width:38px; height:16px; overflow:hidden; flex:0 0 auto; filter:drop-shadow(0 0 4px rgba(63,232,224,0.5)); }
   .pulse-hb svg{ width:200%; height:100%; animation:hbScroll 2.6s linear infinite; }
   .pulse-title{ font-family:'Space Grotesk',sans-serif; font-size:10px; letter-spacing:0.7px; text-transform:uppercase; color:var(--muted); }
   .pulse-source{ font-size:9.5px; color:var(--muted-2); margin-left:auto; }
@@ -302,11 +319,16 @@
 
 <section class="usp-strip">
   <div class="usp-item">
-    <div class="usp-wave"><svg viewBox="0 0 100 24" preserveAspectRatio="none"><path d="M0,14 Q8,4 16,14 T32,14 T48,14 T64,14 T80,14 T96,14 T112,14" stroke="var(--emerald)" stroke-width="2.5" fill="none"/></svg></div>
+    <div class="usp-mini-gauge">
+      <svg viewBox="0 0 84 84">
+        <circle cx="42" cy="42" r="34" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="9"/>
+        <circle class="usp-gauge-ring" cx="42" cy="42" r="34" fill="none" stroke-width="9" stroke-linecap="round" transform="rotate(-90 42 42)"/>
+      </svg>
+    </div>
     <div class="usp-text"><b id="uspTideTitle"></b><p id="uspTideText"></p></div>
   </div>
   <div class="usp-item">
-    <div class="usp-heartbeat"><svg viewBox="0 0 100 24" preserveAspectRatio="none"><path d="M0,12 L20,12 L26,2 L32,22 L38,12 L100,12 L120,12 L126,2 L132,22 L138,12 L200,12" stroke="var(--cyan)" stroke-width="2.5" fill="none"/></svg></div>
+    <div class="usp-heartbeat"><svg viewBox="0 0 100 32" preserveAspectRatio="none"><path d="M0,16 L20,16 L26,2 L32,30 L38,16 L100,16 L120,16 L126,2 L132,30 L138,16 L200,16" stroke="var(--cyan)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></div>
     <div class="usp-text"><b id="uspPulseTitle"></b><p id="uspPulseText"></p></div>
   </div>
   <a href="guide.html" target="_blank" rel="noopener" class="usp-guide-cta" id="uspGuideCta">
@@ -1202,7 +1224,7 @@ function waveSvg(hex){
   return `<svg viewBox="0 0 100 24" preserveAspectRatio="none"><path d="M0,14 Q8,4 16,14 T32,14 T48,14 T64,14 T80,14 T96,14 T112,14" stroke="${hex}" stroke-width="3" fill="none"/></svg>`;
 }
 function hbSvg(hex){
-  return `<svg viewBox="0 0 100 24" preserveAspectRatio="none"><path d="M0,12 L20,12 L26,2 L32,22 L38,12 L100,12 L120,12 L126,2 L132,22 L138,12 L200,12" stroke="${hex}" stroke-width="2.5" fill="none"/></svg>`;
+  return `<svg viewBox="0 0 100 24" preserveAspectRatio="none"><path d="M0,12 L20,12 L26,2 L32,22 L38,12 L100,12 L120,12 L126,2 L132,22 L138,12 L200,12" stroke="${hex}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>`;
 }
 
 // ---------- insight generator (rule-based, from real computed factors) ----------
