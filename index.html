@@ -298,9 +298,14 @@
   .depth-canvas-wrap{ padding:16px; }
   .depth-canvas{ width:100%; height:180px; display:block; }
   .depth-mid{ text-align:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); margin-top:8px; }
+  .liq-canvas-row{ display:flex; gap:4px; align-items:stretch; }
+  .liq-canvas-row .liq-canvas-wrap{ flex:1 1 auto; min-width:0; }
   .liq-canvas-wrap{ padding:14px; }
   .liq-canvas{ width:100%; height:300px; display:block; border-radius:8px; }
   @media (max-width:480px){ .liq-canvas{ height:340px; } } /* narrower width means each price band reads shorter — extra height keeps the gradient legible */
+  .liq-axis{ flex:0 0 auto; width:58px; display:flex; flex-direction:column; justify-content:space-between;
+    padding:14px 2px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--muted); text-align:right; }
+  .liq-axis span{ line-height:1; white-space:nowrap; }
 
   /* ---------- correlation heatmap ---------- */
   .corr-table{ padding:16px; }
@@ -432,8 +437,11 @@
         </div>
         <div class="heatmap-model-disclaimer" id="heatmapModelDisclaimer" hidden></div>
         <div class="heatmap-detail-stats" id="heatmapDetailStats"></div>
-        <div class="glass liq-canvas-wrap">
-          <canvas class="liq-canvas" id="heatmapDetailCanvas"></canvas>
+        <div class="liq-canvas-row">
+          <div class="glass liq-canvas-wrap">
+            <canvas class="liq-canvas" id="heatmapDetailCanvas"></canvas>
+          </div>
+          <div class="liq-axis" id="heatmapDetailAxis"></div>
         </div>
       </div>
     </div>
@@ -1929,7 +1937,7 @@ function renderHeatmapDetailView(){
   const m = market[heatmapExpandedAsset];
   if(!ohlc || !m){ statsEl.innerHTML = `<span class="heatmap-empty">${L.heatmap.detailLoading}</span>`; return; }
   const points = computeLiquidationDensity(ohlc.closes, MAX_LEVERAGE[heatmapExpandedAsset] || 10);
-  drawLiquidationDensity(points, m.price, canvas, statsEl, L);
+  drawLiquidationDensity(points, m.price, canvas, statsEl, document.getElementById('heatmapDetailAxis'), L);
 }
 
 function openHeatmapDetail(assetId){
@@ -2008,18 +2016,33 @@ function heatScaleColor(t){
   const c = lo[1].map((v,i)=> Math.round(v + (hi[1][i]-v)*f));
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
-function drawLiquidationDensity(points, currentPrice, canvas, statsEl, L){
+// Renders the price axis as real HTML text next to the canvas — not drawn onto the heat
+// graphic itself, so the colors stay uncluttered and the numbers stay crisp at any zoom level.
+function renderLiqAxis(minPx, maxPx, axisEl){
+  const ROWS = 6;
+  let html = '';
+  for(let i=ROWS;i>=0;i--){ // top row = highest price, bottom row = lowest — matches the canvas orientation
+    const labelPx = minPx + (maxPx-minPx)*(i/ROWS);
+    html += `<span>${fmtUsd(labelPx)}</span>`;
+  }
+  axisEl.innerHTML = html;
+}
+function drawLiquidationDensity(points, currentPrice, canvas, statsEl, axisEl, L){
   const dpr = window.devicePixelRatio||1;
   const rect = canvas.getBoundingClientRect();
   const w = Math.max(rect.width,100), h = canvas.clientHeight || 180;
   canvas.width=w*dpr; canvas.height=h*dpr;
   const ctx = canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
-  if(!points || !points.length){ if(statsEl) statsEl.innerHTML=''; return; }
+  if(!points || !points.length){ if(statsEl) statsEl.innerHTML=''; if(axisEl) axisEl.innerHTML=''; return; }
 
-  const prices = points.map(p=>p.px);
-  const minPx = Math.min(...prices, currentPrice*0.9), maxPx = Math.max(...prices, currentPrice*1.1);
+  // Tighter, fixed ±25% window around the current price (rather than stretching all the way
+  // out to the widest leverage tier's reach) — the low-leverage tail was diluting resolution
+  // right where it matters most: close to where price actually is. Any point beyond this
+  // window still lands in the nearest edge bucket, so its weight isn't lost, just compressed.
+  const RANGE_PCT = 0.25;
+  const minPx = currentPrice * (1-RANGE_PCT), maxPx = currentPrice * (1+RANGE_PCT);
   const range = (maxPx-minPx)||1;
-  const BUCKETS = 60;
+  const BUCKETS = 100; // twice the resolution of the previous version within a narrower window
   const density = new Array(BUCKETS).fill(0);
   points.forEach(p=>{
     const bi = Math.min(BUCKETS-1, Math.max(0, Math.floor((p.px-minPx)/range*BUCKETS)));
@@ -2051,25 +2074,16 @@ function drawLiquidationDensity(points, currentPrice, canvas, statsEl, L){
     }
   }
 
-  // current price marker
+  // current price marker — kept as a plain reference line; its value is already shown as text
+  // in the stats row above, so it doesn't need its own in-canvas label anymore either.
   const curY = h - ((currentPrice-minPx)/range)*h;
-  ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.setLineDash([4,3]); ctx.lineWidth=1;
+  ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.setLineDash([4,3]); ctx.lineWidth=1.2;
   ctx.beginPath(); ctx.moveTo(0,curY); ctx.lineTo(w,curY); ctx.stroke(); ctx.setLineDash([]);
 
-  // Price axis labels (vertical axis here — low prices at the bottom, high at the top)
-  ctx.font = '9px "IBM Plex Mono", monospace';
-  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-  const LABEL_ROWS = 5;
-  for(let i=0;i<=LABEL_ROWS;i++){
-    const frac = i/LABEL_ROWS;
-    const labelPx = minPx + range*frac;
-    const ly = h - frac*h;
-    ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(0, ly); ctx.lineTo(w-2, ly); ctx.stroke();
-    const clampedY = Math.min(h-6, Math.max(7, ly)); // keep top/bottom labels from clipping off-canvas
-    ctx.fillStyle = 'rgba(255,255,255,0.45)';
-    ctx.fillText(fmtUsd(labelPx), w-4, clampedY);
-  }
+  // Price labels now live in a separate HTML column next to the canvas (renderLiqAxis) instead
+  // of being drawn as text inside the heat graphic itself — crisper text, and the colors read
+  // on their own without labels competing for the same pixels.
+  if(axisEl) renderLiqAxis(minPx, maxPx, axisEl);
 
   if(statsEl){
     const hottest = density.indexOf(maxD);
