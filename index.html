@@ -279,24 +279,28 @@
   .heatmap-tile{ cursor:pointer; }
   .heatmap-tile.active-tile{ box-shadow:0 0 0 2px var(--cyan) inset; }
   .heatmap-detail{ overflow:hidden; max-height:0; opacity:0; transition:max-height .25s ease, opacity .2s ease, margin-top .25s ease; margin-top:0; }
-  .heatmap-detail.open{ max-height:680px; opacity:1; margin-top:16px; }
-  .heatmap-detail-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .heatmap-detail.open{ max-height:760px; opacity:1; margin-top:16px; }
+  .heatmap-detail-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
   .heatmap-detail-title{ font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:var(--text); }
-  .heatmap-detail-close{ background:var(--glass); border:1px solid var(--line); color:var(--muted); width:26px; height:26px; border-radius:50%; cursor:pointer; font-size:16px; line-height:1; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+  .heatmap-detail-head-right{ display:flex; align-items:center; gap:8px; flex:0 0 auto; }
+  .heatmap-model-badge{ background:var(--glass); border:1px solid var(--line); color:var(--muted); font-size:10.5px; padding:8px 12px; border-radius:9px; cursor:pointer; display:flex; align-items:center; gap:5px; font-family:inherit; line-height:1; }
+  .heatmap-model-badge:hover, .heatmap-model-badge[aria-expanded="true"]{ border-color:var(--cyan); color:var(--cyan); }
+  .heatmap-detail-close{ background:var(--glass); border:1px solid var(--line); color:var(--muted); width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:17px; line-height:1; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
   .heatmap-detail-close:hover{ border-color:var(--cyan); color:var(--cyan); }
   .heatmap-detail-stats{ display:flex; flex-wrap:wrap; gap:16px; margin-bottom:12px; }
   .heatmap-stat{ display:flex; flex-direction:column; gap:2px; }
   .heatmap-stat span{ font-size:9.5px; color:var(--muted-2); text-transform:uppercase; letter-spacing:0.4px; }
   .heatmap-stat b{ font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--text); }
-  .heatmap-model-disclaimer{ font-size:10.5px; color:var(--muted-2); line-height:1.55; background:var(--glass-hi); border:1px solid var(--line); border-radius:8px; padding:9px 12px; margin-bottom:12px; }
+  .heatmap-model-disclaimer{ font-size:10.5px; color:var(--muted-2); line-height:1.55; background:var(--glass-hi); border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-bottom:12px; }
+  .heatmap-model-disclaimer[hidden]{ display:none; }
   .depth-tab{ background:var(--glass); border:1px solid var(--line); color:var(--muted); font-size:11.5px; padding:6px 12px; border-radius:8px; cursor:pointer; }
   .depth-tab.active{ border-color:var(--cyan); color:var(--text); }
   .depth-canvas-wrap{ padding:16px; }
   .depth-canvas{ width:100%; height:180px; display:block; }
   .depth-mid{ text-align:center; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); margin-top:8px; }
   .liq-canvas-wrap{ padding:14px; }
-  .liq-canvas{ width:100%; height:260px; display:block; border-radius:8px; }
-  @media (max-width:480px){ .liq-canvas{ height:300px; } } /* narrower width means each price band reads shorter — extra height keeps the gradient legible */
+  .liq-canvas{ width:100%; height:300px; display:block; border-radius:8px; }
+  @media (max-width:480px){ .liq-canvas{ height:340px; } } /* narrower width means each price band reads shorter — extra height keeps the gradient legible */
 
   /* ---------- correlation heatmap ---------- */
   .corr-table{ padding:16px; }
@@ -421,9 +425,12 @@
       <div class="heatmap-detail" id="heatmapDetail" hidden>
         <div class="heatmap-detail-head">
           <span class="heatmap-detail-title" id="heatmapDetailTitle"></span>
-          <button class="heatmap-detail-close" id="heatmapDetailClose" aria-label="Close">&times;</button>
+          <div class="heatmap-detail-head-right">
+            <button class="heatmap-model-badge" id="heatmapModelBadge" aria-expanded="false"><span>&#8505;</span><span id="heatmapModelBadgeLabel"></span></button>
+            <button class="heatmap-detail-close" id="heatmapDetailClose" aria-label="Close">&times;</button>
+          </div>
         </div>
-        <div class="heatmap-model-disclaimer" id="heatmapModelDisclaimer"></div>
+        <div class="heatmap-model-disclaimer" id="heatmapModelDisclaimer" hidden></div>
         <div class="heatmap-detail-stats" id="heatmapDetailStats"></div>
         <div class="glass liq-canvas-wrap">
           <canvas class="liq-canvas" id="heatmapDetailCanvas"></canvas>
@@ -555,7 +562,7 @@ const I18N = {
     lastUpdatePrefix:'updated', loading:'Loading…',
     blockStyle:'Trading style', blockDepth:'Order book depth', blockCorr:'Correlation', blockMatrix:'Compare all assets', blockSignals:'Live signals', blockWeights:'Weighting',
     heatmap:{ title:'Asset heatmap', statusLive:'Live', statusLoading:'Loading…', loading:'Loading market data…',
-      detailLoading:'Loading…',
+      detailLoading:'Loading…', modelBadge:'Model info',
       modelDisclaimer:'Modeled from open interest and typical leverage tiers on Hyperliquid — not real position data. No exchange publishes actual aggregate liquidation levels; this is a mechanical estimate, not a fact.',
       currentPrice:'Current price', hottestZone:'Densest estimated zone' },
     depthInfoBtn:'What is this?',
@@ -634,7 +641,7 @@ const I18N = {
     lastUpdatePrefix:'aktualisiert', loading:'Lädt…',
     blockStyle:'Trading-Stil', blockDepth:'Orderbuch-Tiefe', blockCorr:'Korrelation', blockMatrix:'Alle Assets vergleichen', blockSignals:'Live-Signale', blockWeights:'Gewichtung',
     heatmap:{ title:'Asset-Heatmap', statusLive:'Live', statusLoading:'Lädt…', loading:'Marktdaten werden geladen…',
-      detailLoading:'Lädt…',
+      detailLoading:'Lädt…', modelBadge:'Modell-Info',
       modelDisclaimer:'Modelliert aus Open Interest und typischen Hebel-Stufen auf Hyperliquid — keine echten Positionsdaten. Keine Börse veröffentlicht echte aggregierte Liquidationslevel; das hier ist eine mechanische Schätzung, kein Fakt.',
       currentPrice:'Aktueller Preis', hottestZone:'Dichteste geschätzte Zone' },
     depthInfoBtn:'Was bedeutet das?',
@@ -1712,9 +1719,11 @@ function renderTokenLogo(assetId){
   const img = document.getElementById('logo-'+assetId);
   const fallback = document.getElementById('logoFallback-'+assetId);
   if(!img || !fallback || !m || !m.logo) return;
-  if(img.dataset.loadedSrc === m.logo) return; // already successfully showing this exact logo — nothing to do
-  img.onload = () => { img.dataset.loadedSrc = m.logo; img.hidden = false; fallback.hidden = true; };
-  img.onerror = () => { img.hidden = true; fallback.hidden = false; }; // NOT marked as loaded — a later refresh cycle gets another chance rather than being stuck on a transient failure forever
+  if(!img.hidden) return; // already showing a logo successfully — never reload it just because the URL's cache-busting query string ticked over on a later refresh
+  if(img.dataset.attemptedSrc === m.logo) return; // already tried this exact URL this cycle-chain and it's still pending/failed — avoid hammering it
+  img.dataset.attemptedSrc = m.logo;
+  img.onload = () => { img.hidden = false; fallback.hidden = true; };
+  img.onerror = () => { img.hidden = true; fallback.hidden = false; img.dataset.attemptedSrc = ''; }; // clear so a later refresh cycle (possibly with a fresh URL) gets another try
   img.src = m.logo;
 }
 function recomputeAllScores(recordSignals){
@@ -1912,10 +1921,10 @@ function renderHeatmapDetailView(){
   const L = t();
   const asset = ASSETS.find(a=>a.id===heatmapExpandedAsset);
   if(!asset) return;
-  const disclaimer = document.getElementById('heatmapModelDisclaimer');
   const canvas = document.getElementById('heatmapDetailCanvas');
   const statsEl = document.getElementById('heatmapDetailStats');
-  disclaimer.textContent = L.heatmap.modelDisclaimer;
+  document.getElementById('heatmapModelDisclaimer').textContent = L.heatmap.modelDisclaimer;
+  document.getElementById('heatmapModelBadgeLabel').textContent = L.heatmap.modelBadge;
   const ohlc = rawOHLC[currentStyle][heatmapExpandedAsset];
   const m = market[heatmapExpandedAsset];
   if(!ohlc || !m){ statsEl.innerHTML = `<span class="heatmap-empty">${L.heatmap.detailLoading}</span>`; return; }
@@ -1932,6 +1941,11 @@ function openHeatmapDetail(assetId){
   const panel = document.getElementById('heatmapDetail');
   panel.hidden = false;
   panel.classList.add('open');
+  // Collapsed by default every time a new tile is opened — the disclaimer stays one tap away
+  // via the badge instead of permanently eating space above the chart on a small screen.
+  const disclaimer = document.getElementById('heatmapModelDisclaimer');
+  disclaimer.hidden = true;
+  document.getElementById('heatmapModelBadge').setAttribute('aria-expanded', 'false');
   document.getElementById('heatmapDetailTitle').textContent = `${asset.name} (${asset.sym})`;
   renderHeatmapDetailView();
 }
@@ -1944,6 +1958,13 @@ document.getElementById('heatmapGrid').addEventListener('click', (e)=>{
   else openHeatmapDetail(assetId);
 });
 document.getElementById('heatmapDetailClose').addEventListener('click', closeHeatmapDetail);
+document.getElementById('heatmapModelBadge').addEventListener('click', ()=>{
+  const disclaimer = document.getElementById('heatmapModelDisclaimer');
+  const badge = document.getElementById('heatmapModelBadge');
+  const open = disclaimer.hidden;
+  disclaimer.hidden = !open;
+  badge.setAttribute('aria-expanded', String(open));
+});
 
 function toggleHeatmap(forceOpen){
   const open = forceOpen!=null ? forceOpen : !heatmapState.open;
