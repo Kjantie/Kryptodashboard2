@@ -239,6 +239,40 @@
 
   /* ---------- depth chart ---------- */
   .depth-tabs{ display:flex; gap:6px; margin-bottom:12px; }
+
+  /* ---------- Heatmap ---------- */
+  .heatmap-header{ width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px;
+    background:none; border:none; padding:0; margin-bottom:0; cursor:pointer; text-align:left; font-family:inherit; }
+  .heatmap-header-left{ display:flex; align-items:center; gap:10px; }
+  .heatmap-chevron{ display:inline-block; color:var(--cyan); font-size:12px; transition:transform .18s ease; flex:0 0 auto; }
+  .heatmap-header[aria-expanded="true"] .heatmap-chevron{ transform:rotate(90deg); }
+  .heatmap-status{ font-size:11px; color:var(--muted); font-family:'IBM Plex Mono',monospace; flex:0 0 auto; }
+  .heatmap-body{ overflow:hidden; max-height:0; opacity:0; transition:max-height .2s ease, opacity .18s ease, margin-top .2s ease; margin-top:0; }
+  .heatmap-body.open{ max-height:2400px; opacity:1; margin-top:16px; }
+  .heatmap-controls{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:14px; }
+  .heatmap-tabs{ display:flex; gap:4px; background:var(--glass); border:1px solid var(--line); border-radius:10px; padding:3px; }
+  .heatmap-tab{ background:none; border:none; color:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:11px; padding:5px 10px; border-radius:7px; cursor:pointer; }
+  .heatmap-tab.active{ background:var(--cyan); color:#04141A; font-weight:600; }
+  .heatmap-search{ flex:1 1 140px; min-width:120px; background:var(--glass); border:1px solid var(--line); border-radius:10px; padding:7px 12px; color:var(--text); font-size:12.5px; font-family:inherit; }
+  .heatmap-search:focus{ outline:none; border-color:var(--cyan); }
+  .heatmap-highlight-toggle{ display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--muted); cursor:pointer; user-select:none; margin-left:auto; }
+  .heatmap-highlight-toggle input{ accent-color:var(--cyan); }
+  .heatmap-grid{ display:flex; flex-wrap:wrap; gap:3px; align-content:flex-start; }
+  .heatmap-tile{ position:relative; border-radius:8px; padding:7px 9px; min-width:64px; flex:1 1 auto; overflow:hidden;
+    transition:opacity .15s, transform .12s; cursor:default; }
+  .heatmap-tile:hover{ transform:scale(1.035); z-index:2; }
+  .heatmap-tile.dimmed{ opacity:0.22; }
+  .heatmap-tile.core-highlight{ box-shadow:0 0 0 2px var(--cyan) inset; }
+  .heatmap-tile-sym{ font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:12px; color:#04141A; }
+  .heatmap-tile-chg{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:rgba(4,20,26,0.82); margin-top:1px; }
+  .heatmap-empty{ font-size:12.5px; color:var(--muted); font-style:italic; padding:20px 0; text-align:center; }
+  .heatmap-legend{ display:flex; align-items:center; gap:8px; margin-top:14px; font-size:10px; color:var(--muted-2); }
+  .heatmap-legend-bar{ flex:1; max-width:180px; height:6px; border-radius:3px; background:linear-gradient(90deg,var(--red),rgba(255,255,255,0.1) 50%,var(--emerald)); }
+  @media (max-width:600px){
+    .heatmap-controls{ flex-direction:column; align-items:stretch; }
+    .heatmap-highlight-toggle{ margin-left:0; }
+    .heatmap-search{ width:100%; }
+  }
   .depth-tab{ background:var(--glass); border:1px solid var(--line); color:var(--muted); font-size:11.5px; padding:6px 12px; border-radius:8px; cursor:pointer; }
   .depth-tab.active{ border-color:var(--cyan); color:var(--text); }
   .depth-canvas-wrap{ padding:16px; }
@@ -355,6 +389,30 @@
   </section>
 
   <section class="block">
+    <button class="heatmap-header" id="heatmapToggle" aria-expanded="false" aria-controls="heatmapBody">
+      <span class="heatmap-header-left">
+        <span class="heatmap-chevron" id="heatmapChevron">&#9656;</span>
+        <span class="block-title" id="heatmapTitle" style="margin:0;"></span>
+      </span>
+      <span class="heatmap-status" id="heatmapStatus"></span>
+    </button>
+    <div class="heatmap-body" id="heatmapBody" hidden>
+      <div class="heatmap-controls">
+        <div class="heatmap-tabs" id="heatmapTfTabs"></div>
+        <div class="heatmap-tabs" id="heatmapLimitTabs"></div>
+        <input type="text" class="heatmap-search" id="heatmapSearch" autocomplete="off">
+        <label class="heatmap-highlight-toggle">
+          <input type="checkbox" id="heatmapHighlight">
+          <span id="heatmapHighlightLabel"></span>
+        </label>
+      </div>
+      <div class="heatmap-grid" id="heatmapGrid"></div>
+      <div class="heatmap-empty" id="heatmapEmpty" hidden></div>
+      <div class="heatmap-legend" id="heatmapLegend"></div>
+    </div>
+  </section>
+
+  <section class="block">
     <div class="block-title-row">
       <p class="block-title" id="blockDepthTitle"></p>
       <button class="info-btn" id="depthInfoBtn" aria-expanded="false"><span class="info-icon">i</span><span id="depthInfoBtnLabel"></span></button>
@@ -448,6 +506,12 @@ const I18N = {
     statusConnecting:'connecting…', statusLive:'live', statusError:'connection error — retrying',
     lastUpdatePrefix:'updated', loading:'Loading…',
     blockStyle:'Trading style', blockDepth:'Order book depth', blockCorr:'Correlation', blockMatrix:'Compare all assets', blockSignals:'Live signals', blockWeights:'Weighting',
+    heatmap:{
+      title:'Market heatmap', statusLive:'Live', statusError:'Connection error', statusLoading:'Loading…',
+      updatedAgo:(s)=> s<2 ? 'just now' : `updated ${s}s ago`,
+      searchPlaceholder:'Search coin…', highlightLabel:'Highlight BTC/ETH/SOL/HYPE',
+      loading:'Loading market data…', error:'Could not load the heatmap right now.', noResults:'No coins match that search.',
+    },
     depthInfoBtn:'What is this?',
     guideLink:'Guide',
     depthInfo:'Think of it like a waiting line at a shop. The <b>green side</b> shows how many people are lined up ready to buy if the price drops a little. The <b>red side</b> shows how many are ready to sell if it rises a little. A tall wall means a lot of people are waiting right there, so the price has a harder time pushing through it. This changes constantly as people join or leave the line.',
@@ -523,6 +587,12 @@ const I18N = {
     statusConnecting:'verbinde…', statusLive:'live', statusError:'Verbindungsfehler — neuer Versuch',
     lastUpdatePrefix:'aktualisiert', loading:'Lädt…',
     blockStyle:'Trading-Stil', blockDepth:'Orderbuch-Tiefe', blockCorr:'Korrelation', blockMatrix:'Alle Assets vergleichen', blockSignals:'Live-Signale', blockWeights:'Gewichtung',
+    heatmap:{
+      title:'Markt-Heatmap', statusLive:'Live', statusError:'Verbindungsfehler', statusLoading:'Lädt…',
+      updatedAgo:(s)=> s<2 ? 'gerade eben' : `vor ${s}s aktualisiert`,
+      searchPlaceholder:'Coin suchen…', highlightLabel:'BTC/ETH/SOL/HYPE hervorheben',
+      loading:'Marktdaten werden geladen…', error:'Heatmap konnte gerade nicht geladen werden.', noResults:'Keine Coins passen zur Suche.',
+    },
     depthInfoBtn:'Was bedeutet das?',
     guideLink:'Anleitung',
     depthInfo:'Stell es dir wie eine Warteschlange vor einem Laden vor. Die <b>grüne Seite</b> zeigt, wie viele bereitstehen zu kaufen, falls der Kurs etwas fällt. Die <b>rote Seite</b> zeigt, wie viele bereitstehen zu verkaufen, falls er etwas steigt. Eine hohe Wand bedeutet, dort warten viele — der Kurs kommt schwerer durch. Das ändert sich ständig, weil Leute sich ein- und ausreihen.',
@@ -1369,10 +1439,16 @@ function buildWeightSliders(){
     row.querySelector('input').addEventListener('input', e=>{
       w[key]=Number(e.target.value);
       document.getElementById('wval-'+key).textContent=w[key]+'%';
-      updateWeightSum(); recomputeAllScores();
+      updateWeightSum(); // cheap — instant feedback while dragging
+      debouncedRecompute(); // expensive (redraws 4 charts, rebuilds factor lists) — only after the drag settles
     });
   });
   updateWeightSum();
+}
+let weightRecomputeTimer = null;
+function debouncedRecompute(){
+  clearTimeout(weightRecomputeTimer);
+  weightRecomputeTimer = setTimeout(()=> recomputeAllScores(), 120);
 }
 function updateWeightSum(){
   const sum = Object.values(weights[currentStyle]).reduce((a,b)=>a+b,0);
@@ -1699,6 +1775,158 @@ function renderMatrix(){
     rows.map(r=>`<tr><td class="lbl">${r.label}</td>${ASSETS.map(a=>`<td>${r.get(a)}</td>`).join('')}</tr>`).join('');
 }
 
+// ---------- market heatmap ----------
+// Independent from the four TIDE assets — a broader top-N-by-market-cap overview.
+// Only fetched while the section is actually open (saves a CoinGecko call every cycle
+// otherwise), cached briefly so opening/closing repeatedly doesn't spam the API.
+const HEATMAP_CACHE_MS = 55*1000;
+const HEATMAP_STORAGE_KEY = 'tide_heatmap_open';
+let heatmapData = { coins:[], ok:false, fetchedAt:0 };
+let heatmapState = {
+  open: (function(){ try{ return localStorage.getItem(HEATMAP_STORAGE_KEY)==='1'; }catch(e){ return false; } })(),
+  limit: 50, timeframe: '24h', search: '',
+  highlight: (function(){ try{ return localStorage.getItem('tide_heatmap_highlight')==='1'; }catch(e){ return false; } })(),
+};
+
+let heatmapFetchInFlight = null;
+async function fetchHeatmapData(force){
+  if(!heatmapState.open) return; // never fetch while collapsed
+  if(!force && heatmapData.fetchedAt && (Date.now()-heatmapData.fetchedAt) < HEATMAP_CACHE_MS) return;
+  // Initial page load (restoring a previously-open section) and the first refreshAll() cycle
+  // can both want to fetch within the same tick — share one in-flight request instead of firing two.
+  if(heatmapFetchInFlight) return heatmapFetchInFlight;
+  heatmapFetchInFlight = (async ()=>{
+    try{
+      const res = await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${heatmapState.limit}&page=1&price_change_percentage=1h,24h,7d&sparkline=false`);
+      if(!res.ok) throw new Error('CoinGecko markets HTTP '+res.status);
+      const json = await res.json();
+      if(!Array.isArray(json)) throw new Error('unexpected heatmap payload');
+      heatmapData = { coins: json, ok:true, fetchedAt: Date.now() };
+    }catch(err){
+      console.error('Heatmap fetch failed', err);
+      // Keep any previously loaded tiles visible rather than blanking the grid on a transient failure.
+      heatmapData = { ...heatmapData, ok:false, fetchedAt: Date.now() };
+    }
+  })();
+  try{ await heatmapFetchInFlight; } finally { heatmapFetchInFlight = null; }
+}
+
+// Red -> neutral gray -> green, same palette as the rest of the page, capped at ±10% so a
+// single outlier coin doesn't wash out the whole grid's contrast.
+function heatmapColor(pct){
+  if(pct==null) return '#3a4256';
+  const c = Math.max(-10, Math.min(10, pct));
+  const GRAY=[58,66,86], RED=[255,92,122], GREEN=[47,232,151];
+  const to = c<0 ? RED : GREEN;
+  const tt = Math.abs(c)/10;
+  const mix = GRAY.map((v,i)=> Math.round(v + (to[i]-v)*tt));
+  return `rgb(${mix[0]},${mix[1]},${mix[2]})`;
+}
+
+function heatmapStatusText(){
+  const L = t();
+  if(!heatmapData.fetchedAt) return L.heatmap.statusLoading;
+  const secs = Math.max(0, Math.round((Date.now()-heatmapData.fetchedAt)/1000));
+  return (heatmapData.ok ? L.heatmap.statusLive : L.heatmap.statusError) + ' · ' + L.heatmap.updatedAgo(secs);
+}
+
+function renderHeatmap(){
+  const L = t();
+  document.getElementById('heatmapStatus').textContent = heatmapState.open ? heatmapStatusText() : '';
+  if(!heatmapState.open) return;
+
+  const grid = document.getElementById('heatmapGrid');
+  const empty = document.getElementById('heatmapEmpty');
+  const coins = heatmapData.coins;
+
+  if(coins.length===0){
+    grid.innerHTML=''; empty.hidden=false;
+    empty.textContent = heatmapData.ok===false && heatmapData.fetchedAt ? L.heatmap.error : L.heatmap.loading;
+    return;
+  }
+
+  const CORE_IDS = new Set(ASSETS.map(a=>a.id));
+  const pctKey = heatmapState.timeframe==='1h' ? 'price_change_percentage_1h_in_currency'
+    : heatmapState.timeframe==='7d' ? 'price_change_percentage_7d_in_currency'
+    : 'price_change_percentage_24h_in_currency';
+  const q = heatmapState.search.trim().toLowerCase();
+  const maxCap = Math.max(1, ...coins.map(c=>c.market_cap||0));
+  const sqrtMax = Math.sqrt(maxCap);
+
+  let anyVisible = false;
+  grid.innerHTML = coins.map(c=>{
+    const matches = !q || (c.symbol||'').toLowerCase().includes(q) || (c.name||'').toLowerCase().includes(q);
+    if(matches) anyVisible = true;
+    const pct = c[pctKey];
+    const isCore = CORE_IDS.has(c.id);
+    const basis = Math.max(60, Math.round((Math.sqrt(c.market_cap||1)/sqrtMax) * 230));
+    const cls = ['heatmap-tile'];
+    if(!matches) cls.push('dimmed');
+    if(heatmapState.highlight && isCore) cls.push('core-highlight');
+    const pctStr = pct!=null ? (pct>=0?'+':'')+pct.toFixed(1)+'%' : '–';
+    const titleStr = `${c.name} (${(c.symbol||'').toUpperCase()}) · ${fmtUsd(c.current_price)} · ${pctStr} · Mcap ${fmtUsdCompact(c.market_cap)} · Vol ${fmtUsdCompact(c.total_volume)}`;
+    return `<div class="${cls.join(' ')}" style="flex-basis:${basis}px;background:${heatmapColor(pct)};" title="${titleStr.replace(/"/g,'&quot;')}">
+      <div class="heatmap-tile-sym">${(c.symbol||'').toUpperCase()}</div>
+      <div class="heatmap-tile-chg">${pctStr}</div>
+    </div>`;
+  }).join('');
+  empty.hidden = anyVisible;
+  if(!anyVisible) empty.textContent = L.heatmap.noResults;
+}
+
+function buildHeatmapControls(){
+  const L = t();
+  const tfWrap = document.getElementById('heatmapTfTabs'); tfWrap.innerHTML='';
+  ['1h','24h','7d'].forEach(tf=>{
+    const b = document.createElement('button');
+    b.className = 'heatmap-tab'+(heatmapState.timeframe===tf?' active':'');
+    b.textContent = tf; b.dataset.tf = tf;
+    b.addEventListener('click', ()=>{ heatmapState.timeframe=tf; buildHeatmapControls(); renderHeatmap(); });
+    tfWrap.appendChild(b);
+  });
+  const limitWrap = document.getElementById('heatmapLimitTabs'); limitWrap.innerHTML='';
+  [25,50,100].forEach(n=>{
+    const b = document.createElement('button');
+    b.className = 'heatmap-tab'+(heatmapState.limit===n?' active':'');
+    b.textContent = String(n); b.dataset.limit = n;
+    b.addEventListener('click', ()=>{ if(heatmapState.limit===n) return; heatmapState.limit=n; buildHeatmapControls(); fetchHeatmapData(true).then(renderHeatmap); });
+    limitWrap.appendChild(b);
+  });
+  document.getElementById('heatmapSearch').placeholder = L.heatmap.searchPlaceholder;
+  document.getElementById('heatmapHighlightLabel').textContent = L.heatmap.highlightLabel;
+}
+
+function toggleHeatmap(forceOpen){
+  const open = forceOpen!=null ? forceOpen : !heatmapState.open;
+  if(open===heatmapState.open) return;
+  heatmapState.open = open;
+  try{ localStorage.setItem(HEATMAP_STORAGE_KEY, open?'1':'0'); }catch(e){}
+  const btn = document.getElementById('heatmapToggle');
+  const body = document.getElementById('heatmapBody');
+  btn.setAttribute('aria-expanded', String(open));
+  body.classList.toggle('open', open);
+  body.hidden = false; // let the max-height transition handle visibility, not the hidden attribute
+  if(open){
+    if(heatmapData.coins.length===0 || (Date.now()-heatmapData.fetchedAt) > HEATMAP_CACHE_MS){
+      renderHeatmap(); // show a loading state immediately
+      fetchHeatmapData(true).then(renderHeatmap);
+    } else renderHeatmap();
+  }
+}
+
+document.getElementById('heatmapToggle').addEventListener('click', ()=> toggleHeatmap());
+let heatmapSearchTimer = null;
+document.getElementById('heatmapSearch').addEventListener('input', (e)=>{
+  heatmapState.search = e.target.value;
+  clearTimeout(heatmapSearchTimer);
+  heatmapSearchTimer = setTimeout(renderHeatmap, 80);
+});
+document.getElementById('heatmapHighlight').addEventListener('change', (e)=>{
+  heatmapState.highlight = e.target.checked;
+  try{ localStorage.setItem('tide_heatmap_highlight', heatmapState.highlight?'1':'0'); }catch(err){}
+  renderHeatmap();
+});
+
 // ---------- order book depth chart ----------
 async function loadDepth(assetId){
   focusedDepthAsset = assetId;
@@ -1829,6 +2057,9 @@ function applyStaticText(){
   document.getElementById('uspGuideText').textContent = L.uspGuideText;
   document.getElementById('uspGuideCta').setAttribute('href', 'guide.html?lang='+currentLang);
   document.getElementById('blockStyleTitle').textContent = L.blockStyle;
+  document.getElementById('heatmapTitle').textContent = L.heatmap.title;
+  buildHeatmapControls();
+  if(heatmapState.open) renderHeatmap();
   document.getElementById('blockDepthTitle').textContent = L.blockDepth;
   document.getElementById('depthInfoBtnLabel').textContent = L.depthInfoBtn;
   document.getElementById('guideLinkLabel').textContent = L.guideLink;
@@ -1934,12 +2165,13 @@ async function refreshAll(){
     // fetchAllBinanceData) so we don't burst any one host too hard — only the three chains
     // themselves now run side by side instead of back to back.
     await Promise.all([
-      fetchMarketsAndFGI().then(()=> fetchStyleData(currentStyle)),
+      fetchMarketsAndFGI().then(()=> fetchStyleData(currentStyle)).then(()=> fetchHeatmapData()),
       fetchAllBinanceData(),
       fetchDerivatives(), // the Basis factor needs markPx already in hand before recomputeAllScores
     ]);
     recomputeAllScores(true);
     renderAllDerivatives(); // updates the separate Perp Pulse UI block
+    renderHeatmap();
     lastStatus = Object.keys(market).length>0 ? 'live' : 'error';
     renderStatus();
     if(Object.keys(market).length>0){ lastUpdateTs = new Date(); renderLastUpdate(); }
@@ -1955,22 +2187,36 @@ function resetRefreshTimer(){
   refreshTimer = setInterval(refreshAll, STYLE_PARAMS[currentStyle].refresh);
 }
 
+let resizeTimer = null;
 window.addEventListener('resize', ()=>{
-  ASSETS.forEach(a=>{
-    const raw = (lastGood[currentStyle][a.id]||{}).raw;
-    const ohlc = rawOHLC[currentStyle][a.id];
-    if(ohlc){
-      drawCandles(document.getElementById('chart-'+a.id), ohlc, raw ? { emaFastArr: raw.emaFastArr, emaSlowArr: raw.emaSlowArr, bbUpper: raw.bbUpper, bbLower: raw.bbLower } : null);
-      drawMacd(document.getElementById('macd-'+a.id), raw ? raw.macdHistArr : null);
-    }
-  });
-  const book = focusedDepthAsset;
-  loadDepth(book);
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(()=>{
+    ASSETS.forEach(a=>{
+      const raw = (lastGood[currentStyle][a.id]||{}).raw;
+      const ohlc = rawOHLC[currentStyle][a.id];
+      if(ohlc){
+        drawCandles(document.getElementById('chart-'+a.id), ohlc, raw ? { emaFastArr: raw.emaFastArr, emaSlowArr: raw.emaSlowArr, bbUpper: raw.bbUpper, bbLower: raw.bbLower } : null);
+        drawMacd(document.getElementById('macd-'+a.id), raw ? raw.macdHistArr : null);
+      }
+    });
+    const book = focusedDepthAsset;
+    loadDepth(book);
+  }, 200);
 });
 
 buildStyleTabs();
 buildCards();
 applyStaticText();
+buildHeatmapControls();
+document.getElementById('heatmapHighlight').checked = heatmapState.highlight;
+if(heatmapState.open){
+  // Apply the persisted "open" state directly to the UI on first load (not via toggleHeatmap,
+  // which is built for detecting a *change* in state, not for applying an already-known one).
+  document.getElementById('heatmapToggle').setAttribute('aria-expanded', 'true');
+  document.getElementById('heatmapBody').classList.add('open');
+  document.getElementById('heatmapBody').hidden = false;
+  fetchHeatmapData(true).then(renderHeatmap);
+}
 refreshAll();
 resetRefreshTimer();
 </script>
