@@ -189,6 +189,7 @@
   .setup-row.setup-invalid b{ color:var(--red); }
   .setup-row.setup-target b{ color:var(--emerald); }
   .setup-rr{ font-size:10.5px; color:var(--cyan); font-family:'IBM Plex Mono',monospace; margin-bottom:6px; }
+  .setup-rr.rr-weak{ color:var(--amber); }
   .setup-disclaimer{ font-size:9.5px; color:var(--muted-2); line-height:1.4; }
   .setup-neutral{ font-size:11.5px; color:var(--muted); font-style:italic; }
   .risk-line b{ color:var(--text); }
@@ -440,7 +441,7 @@ const STYLE_PARAMS = {
 
 const I18N = {
   en: {
-    tagline: "Multi-factor entry zones for BTC, ETH, SOL and Hyperliquid, with live derivatives sentiment straight from Hyperliquid's own perp order book.",
+    tagline: "Multi-factor entry zones for BTC, ETH, SOL and HYPE, with live derivatives sentiment straight from Hyperliquid's own perp order book.",
     uspTideTitle:'Tide', uspTideText:'Shows whether a price is cheap or expensive right now — like low and high tide at the beach.',
     uspPulseTitle:'Pulse', uspPulseText:"Shows whether leveraged traders are feeling bold or scared right now — like a heartbeat monitor for the market.",
     uspGuideTitle:'New here?', uspGuideText:'Read the plain-language guide →',
@@ -470,6 +471,7 @@ const I18N = {
     setup:{
       heading:'Setup levels', longRef:'Long-side reference', shortRef:'Short-side reference', noSetup:'No directional setup — zone is neutral.',
       entry:'Entry zone', invalidation:'Invalidation', target1:'Target 1', target2:'Target 2', rr:'Reference R:R',
+      rrWeak:'below the ~1.5:1 many traders look for',
       disclaimer:'Worked out automatically from the price chart. Not a recommendation to trade — how much to risk is always your call.',
     },
     divergence:{
@@ -514,7 +516,7 @@ const I18N = {
     shortcuts:'Keyboard: 1/2/3 switch style · M opens this guide · C copies a snapshot · Esc closes',
   },
   de: {
-    tagline: "Multi-Faktor-Einstiegszonen für BTC, ETH, SOL und Hyperliquid, mit Live-Derivate-Sentiment direkt aus Hyperliquids eigenem Perp-Orderbuch.",
+    tagline: "Multi-Faktor-Einstiegszonen für BTC, ETH, SOL und HYPE, mit Live-Derivate-Sentiment direkt aus Hyperliquids eigenem Perp-Orderbuch.",
     uspTideTitle:'Tide', uspTideText:'Zeigt, ob ein Kurs gerade günstig oder teuer ist — wie Ebbe und Flut am Strand.',
     uspPulseTitle:'Pulse', uspPulseText:'Zeigt, ob gehebelte Trader gerade mutig oder ängstlich sind — wie ein Herzschlag-Monitor für den Markt.',
     uspGuideTitle:'Neu hier?', uspGuideText:'Anleitung in einfacher Sprache lesen →',
@@ -544,6 +546,7 @@ const I18N = {
     setup:{
       heading:'Setup-Level', longRef:'Long-Referenz', shortRef:'Short-Referenz', noSetup:'Keine richtungsklare Struktur — Zone ist neutral.',
       entry:'Einstiegszone', invalidation:'Invalidierung', target1:'Ziel 1', target2:'Ziel 2', rr:'Referenz-CRV',
+      rrWeak:'unter dem ~1,5:1, das viele Trader mindestens erwarten',
       disclaimer:'Automatisch aus dem Kurschart abgeleitet. Keine Handelsempfehlung — wie viel du riskierst, entscheidest immer du.',
     },
     divergence:{
@@ -743,14 +746,21 @@ function computeFibLevels(highs, lows){
 // Purely mechanical: maps the already-computed zone (Accumulation/Neutral/Distribution)
 // onto the nearest Fibonacci levels around the current price. Not a trade recommendation —
 // just the existing technical structure organized as concrete price references.
-function buildSetupReference(price, fibData, zoneLabel, zoneKind){
+// The invalidation level additionally respects a volatility floor (same 1.5x ATR reference
+// already used elsewhere on the page) — a fib level that happens to sit unrealistically close
+// to entry would get stopped out by ordinary noise, so we walk further out until there's at
+// least that much breathing room, falling back to a plain ATR-based stop if none qualify.
+function buildSetupReference(price, fibData, zoneKind, atr){
   if(!fibData || zoneKind==='neutral') return { direction:'neutral' };
   const levels = fibData.levels.map(l=>l.price).sort((a,b)=>a-b); // ascending: lo..hi
+  const minStopDistance = (atr!=null) ? atr*1.5 : 0;
   if(zoneKind==='long'){
     const below = levels.filter(p=>p<=price);
     const above = levels.filter(p=>p>price);
     const entry = below.length ? below[below.length-1] : fibData.lo;
-    const invalidation = below.length>1 ? below[below.length-2] : fibData.lo;
+    const candidates = below.slice(0, Math.max(0, below.length-1)).reverse(); // nearest to farthest, excluding entry
+    let invalidation = candidates.find(lvl => entry-lvl >= minStopDistance);
+    if(invalidation==null) invalidation = (atr!=null) ? entry - 1.5*atr : (below.length>1 ? below[below.length-2] : fibData.lo);
     const target1 = above.length ? above[0] : fibData.hi;
     const target2 = above.length>1 ? above[1] : fibData.hi;
     return { direction:'long', entry, invalidation, target1, target2,
@@ -759,7 +769,8 @@ function buildSetupReference(price, fibData, zoneLabel, zoneKind){
     const above = levels.filter(p=>p>=price);
     const below = levels.filter(p=>p<price);
     const entry = above.length ? above[0] : fibData.hi;
-    const invalidation = above.length>1 ? above[1] : fibData.hi;
+    let invalidation = above.slice(1).find(lvl => lvl-entry >= minStopDistance);
+    if(invalidation==null) invalidation = (atr!=null) ? entry + 1.5*atr : (above.length>1 ? above[1] : fibData.hi);
     const target1 = below.length ? below[below.length-1] : fibData.lo;
     const target2 = below.length>1 ? below[below.length-2] : fibData.lo;
     return { direction:'short', entry, invalidation, target1, target2,
@@ -973,38 +984,44 @@ function applyStyleData(styleKey, assetId, times, opens, highs, lows, closes, vo
   };
 }
 
+async function fetchStyleDataForAsset(styleKey, cfg, a){
+  let ok = false;
+  try{
+    const [ohlcRes, volRes] = await Promise.all([
+      fetch(`https://api.coingecko.com/api/v3/coins/${a.id}/ohlc?vs_currency=usd&days=${cfg.ohlcDays}`),
+      fetch(`https://api.coingecko.com/api/v3/coins/${a.id}/market_chart?vs_currency=usd&days=${cfg.volDays}`),
+    ]);
+    if(!ohlcRes.ok) throw new Error('ohlc HTTP '+ohlcRes.status+' for '+a.id);
+    if(!volRes.ok) throw new Error('market_chart HTTP '+volRes.status+' for '+a.id);
+    const ohlc = await ohlcRes.json();
+    const chart = await volRes.json();
+    if(!Array.isArray(ohlc) || ohlc.length < 10) throw new Error('no candle data for '+a.id);
+    const times = ohlc.map(c=>c[0]), opens = ohlc.map(c=>c[1]), highs = ohlc.map(c=>c[2]), lows = ohlc.map(c=>c[3]), closes = ohlc.map(c=>c[4]);
+    const volsRaw = (chart.total_volumes||[]).map(v=>v[1]);
+    const volumes = closes.map((_,i)=> volsRaw[Math.min(i, volsRaw.length-1)] || 0);
+    applyStyleData(styleKey, a.id, times, opens, highs, lows, closes, volumes);
+    ok = true;
+  }catch(err){ console.error('CoinGecko candle fetch failed for', a.id, '— trying Kraken', err); }
+  if(!ok){
+    try{
+      const k = await fetchKrakenOHLC(a.id, styleKey);
+      if(k){ applyStyleData(styleKey, a.id, k.times, k.opens, k.highs, k.lows, k.closes, k.volumes); ok = true; }
+    }catch(err){ console.error('Kraken candle fallback also failed for', a.id, err); }
+  }
+  if(!ok){
+    if(!styleData[styleKey][a.id]) styleData[styleKey][a.id] = { _error:true };
+    else styleData[styleKey][a.id]._error = true;
+  }
+}
 async function fetchStyleData(styleKey){
   const cfg = STYLE_PARAMS[styleKey];
-  for(const a of ASSETS){
-    let ok = false;
-    try{
-      const [ohlcRes, volRes] = await Promise.all([
-        fetch(`https://api.coingecko.com/api/v3/coins/${a.id}/ohlc?vs_currency=usd&days=${cfg.ohlcDays}`),
-        fetch(`https://api.coingecko.com/api/v3/coins/${a.id}/market_chart?vs_currency=usd&days=${cfg.volDays}`),
-      ]);
-      if(!ohlcRes.ok) throw new Error('ohlc HTTP '+ohlcRes.status+' for '+a.id);
-      if(!volRes.ok) throw new Error('market_chart HTTP '+volRes.status+' for '+a.id);
-      const ohlc = await ohlcRes.json();
-      const chart = await volRes.json();
-      if(!Array.isArray(ohlc) || ohlc.length < 10) throw new Error('no candle data for '+a.id);
-      const times = ohlc.map(c=>c[0]), opens = ohlc.map(c=>c[1]), highs = ohlc.map(c=>c[2]), lows = ohlc.map(c=>c[3]), closes = ohlc.map(c=>c[4]);
-      const volsRaw = (chart.total_volumes||[]).map(v=>v[1]);
-      const volumes = closes.map((_,i)=> volsRaw[Math.min(i, volsRaw.length-1)] || 0);
-      applyStyleData(styleKey, a.id, times, opens, highs, lows, closes, volumes);
-      ok = true;
-    }catch(err){ console.error('CoinGecko candle fetch failed for', a.id, '— trying Kraken', err); }
-    if(!ok){
-      try{
-        const k = await fetchKrakenOHLC(a.id, styleKey);
-        if(k){ applyStyleData(styleKey, a.id, k.times, k.opens, k.highs, k.lows, k.closes, k.volumes); ok = true; }
-      }catch(err){ console.error('Kraken candle fallback also failed for', a.id, err); }
-    }
-    if(!ok){
-      if(!styleData[styleKey][a.id]) styleData[styleKey][a.id] = { _error:true };
-      else styleData[styleKey][a.id]._error = true;
-    }
-    await new Promise(r=>setTimeout(r, 200)); // staggered to be considerate to CoinGecko's rate limit
-  }
+  // The four assets are entirely independent CoinGecko/Kraken requests — nothing about fetching
+  // BTC's candles depends on ETH's finishing first. Running them together (instead of one by one
+  // with a pause between each) is the single biggest win for "switching to a style for the first
+  // time" specifically, since that's the one case where this function is on the user's critical
+  // path rather than running quietly in the background. The existing Kraken fallback per asset
+  // already absorbs the occasional individual failure, so this doesn't trade away reliability.
+  await Promise.all(ASSETS.map(a => fetchStyleDataForAsset(styleKey, cfg, a)));
 }
 
 async function fetchDerivatives(){
@@ -1408,7 +1425,7 @@ function renderRisk(id, raw){
   el.innerHTML = t().riskLine(raw.atrPct.toFixed(1), fmtUsd(stop));
 }
 
-function renderSetupLevels(assetId, score, zoneLabel){
+function renderSetupLevels(assetId, score, zoneLabel, atr){
   const L = t();
   const el = document.getElementById('setup-'+assetId);
   if(!el) return;
@@ -1420,7 +1437,7 @@ function renderSetupLevels(assetId, score, zoneLabel){
   // Use the SAME full window as the underlying fib score factor (applyStyleData/computeFib),
   // not a shorter slice — otherwise the levels shown here could contradict the score's own reasoning.
   const fibData = computeFibLevels(ohlc.highs, ohlc.lows);
-  const setup = buildSetupReference(m.price, fibData, zoneLabel, zoneKind);
+  const setup = buildSetupReference(m.price, fibData, zoneKind, atr);
 
   if(setup.direction==='neutral'){
     el.innerHTML = `<div class="setup-head"><span class="setup-title">${L.setup.heading}</span></div><div class="setup-neutral">${L.setup.noSetup}</div>`;
@@ -1428,7 +1445,12 @@ function renderSetupLevels(assetId, score, zoneLabel){
   }
   const dirLabel = setup.direction==='long' ? L.setup.longRef : L.setup.shortRef;
   const dirClass = setup.direction==='long' ? 'setup-long' : 'setup-short';
-  const rrText = setup.rr!=null ? `${L.setup.rr} ${setup.rr.toFixed(2)}:1` : '';
+  // A weak reward-to-risk ratio is exactly the kind of thing a professional trader checks
+  // before anything else — many skip a setup outright below roughly 1.5:1, regardless of how
+  // convincing the zone itself looks. Surfaced here directly instead of leaving it to be
+  // discovered only by doing the arithmetic by hand.
+  const rrWeak = setup.rr!=null && setup.rr < 1.5;
+  const rrText = setup.rr!=null ? `${L.setup.rr} ${setup.rr.toFixed(2)}:1${rrWeak ? ' — '+L.setup.rrWeak : ''}` : '';
 
   el.innerHTML = `
     <div class="setup-head"><span class="setup-title">${L.setup.heading}</span><span class="setup-dir ${dirClass}">${dirLabel}</span></div>
@@ -1438,7 +1460,7 @@ function renderSetupLevels(assetId, score, zoneLabel){
       <div class="setup-row setup-target"><span>${L.setup.target1}</span><b class="mono">${fmtUsd(setup.target1)}</b></div>
       <div class="setup-row setup-target"><span>${L.setup.target2}</span><b class="mono">${fmtUsd(setup.target2)}</b></div>
     </div>
-    <div class="setup-rr">${rrText}</div>
+    <div class="setup-rr ${rrWeak?'rr-weak':''}">${rrText}</div>
     <div class="setup-disclaimer">${L.setup.disclaimer}</div>
   `;
 }
@@ -1627,7 +1649,7 @@ function recomputeAllScores(recordSignals){
 
     renderFactors(a.id, scores, raw, w);
     renderRisk(a.id, raw);
-    renderSetupLevels(a.id, score, zone.label);
+    renderSetupLevels(a.id, score, zone.label, raw.atr);
     renderDivergenceBadge(a.id, raw.divergence);
     renderBinancePulse(a.id);
 
